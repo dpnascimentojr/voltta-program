@@ -116,6 +116,15 @@ function readStorage(key, fallback) {
   }
 }
 
+function writeStorage(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function normalizeNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export default function App() {
   const [screen, setScreen] = useState("access");
 
@@ -139,48 +148,52 @@ export default function App() {
   );
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+    writeStorage(STORAGE_KEYS.config, config);
   }, [config]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(customers));
+    writeStorage(STORAGE_KEYS.customers, customers);
   }, [customers]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products));
+    writeStorage(STORAGE_KEYS.products, products);
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
+    writeStorage(STORAGE_KEYS.orders, orders);
   }, [orders]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.promos, JSON.stringify(promos));
+    writeStorage(STORAGE_KEYS.promos, promos);
   }, [promos]);
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEYS.selectedCustomerId,
-      JSON.stringify(selectedCustomerId)
-    );
+    writeStorage(STORAGE_KEYS.selectedCustomerId, selectedCustomerId);
   }, [selectedCustomerId]);
 
-  const selectedCustomer =
-    customers.find((customer) => customer.id === selectedCustomerId) ||
-    customers[0] ||
-    null;
+  const selectedCustomer = useMemo(() => {
+    return (
+      customers.find((customer) => customer.id === selectedCustomerId) ||
+      customers[0] ||
+      null
+    );
+  }, [customers, selectedCustomerId]);
 
-  const customerWithPromos = selectedCustomer
-    ? {
-        ...selectedCustomer,
-        promotions: promos.map((promo) => promo.description),
-      }
-    : null;
+  const customerWithPromos = useMemo(() => {
+    if (!selectedCustomer) return null;
+
+    return {
+      ...selectedCustomer,
+      promotions: promos.map((promo) => promo.description),
+    };
+  }, [selectedCustomer, promos]);
 
   const customerProgress = useMemo(() => {
     if (!customerWithPromos) return 0;
+
     const total = customerWithPromos.nextRewardAt || config.spendGoal || 250;
     const current = customerWithPromos.points || 0;
+
     return Math.min((current / total) * 100, 100);
   }, [customerWithPromos, config]);
 
@@ -237,12 +250,15 @@ export default function App() {
   };
 
   const handleDeleteCustomer = (customerId) => {
-    setCustomers((prev) => prev.filter((customer) => customer.id !== customerId));
+    const remainingCustomers = customers.filter(
+      (customer) => customer.id !== customerId
+    );
+
+    setCustomers(remainingCustomers);
     setOrders((prev) => prev.filter((order) => order.customerId !== customerId));
 
     if (selectedCustomerId === customerId) {
-      const remaining = customers.filter((customer) => customer.id !== customerId);
-      setSelectedCustomerId(remaining[0]?.id || "");
+      setSelectedCustomerId(remainingCustomers[0]?.id || "");
     }
   };
 
@@ -251,9 +267,9 @@ export default function App() {
       id: uid("p"),
       name: payload.name,
       category: payload.category,
-      price: Number(payload.price),
+      price: normalizeNumber(payload.price),
       description: payload.description || "",
-      available: payload.available,
+      available: Boolean(payload.available),
     };
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -267,9 +283,9 @@ export default function App() {
               ...product,
               name: payload.name,
               category: payload.category,
-              price: Number(payload.price),
+              price: normalizeNumber(payload.price),
               description: payload.description || "",
-              available: payload.available,
+              available: Boolean(payload.available),
             }
           : product
       )
@@ -312,20 +328,23 @@ export default function App() {
 
   const handleSaveConfig = (payload) => {
     setConfig({
-      pointsPerReal: Number(payload.pointsPerReal || 10),
-      spendGoal: Number(payload.spendGoal || 250),
-      checkinPercent: Number(payload.checkinPercent || 10),
+      pointsPerReal: normalizeNumber(payload.pointsPerReal, 10),
+      spendGoal: normalizeNumber(payload.spendGoal, 250),
+      checkinPercent: normalizeNumber(payload.checkinPercent, 10),
     });
   };
 
   const handleAddBonus = ({ customerId, points }) => {
-    const bonus = Number(points || 0);
+    const bonus = normalizeNumber(points);
     if (!customerId || !bonus) return;
 
     setCustomers((prev) =>
       prev.map((customer) =>
         customer.id === customerId
-          ? { ...customer, points: Number(customer.points || 0) + bonus }
+          ? {
+              ...customer,
+              points: normalizeNumber(customer.points) + bonus,
+            }
           : customer
       )
     );
@@ -334,9 +353,11 @@ export default function App() {
   const handleAddOrder = (payload) => {
     const customer = customers.find((item) => item.id === payload.customerId);
     const product = products.find((item) => item.id === payload.productId);
-    const total = Number(payload.total || 0);
+    const total = normalizeNumber(payload.total);
 
     if (!customer || !product || !total) return;
+
+    const now = new Date().toISOString();
 
     const newOrder = {
       id: uid("o"),
@@ -348,7 +369,7 @@ export default function App() {
       status: payload.status,
       total,
       note: payload.note || "",
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
 
     setOrders((prev) => [newOrder, ...prev]);
@@ -359,15 +380,17 @@ export default function App() {
 
         return {
           ...item,
-          totalSpent: Number(item.totalSpent || 0) + total,
-          points: Number(item.points || 0) + total * Number(config.pointsPerReal || 10),
-          visits: Number(item.visits || 0) + 1,
+          totalSpent: normalizeNumber(item.totalSpent) + total,
+          points:
+            normalizeNumber(item.points) +
+            total * normalizeNumber(config.pointsPerReal, 10),
+          visits: normalizeNumber(item.visits) + 1,
           history: [
             {
               id: uid("h"),
               product: product.name,
               amount: total,
-              date: new Date().toISOString(),
+              date: now,
             },
             ...(item.history || []),
           ],
@@ -381,9 +404,9 @@ export default function App() {
 
     const coupon = {
       id: uid("cp"),
-      title: `${config.checkinPercent}% no check-in`,
+      title: `${normalizeNumber(config.checkinPercent, 10)}% no check-in`,
       code: `CHECKIN${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
-      percent: Number(config.checkinPercent || 10),
+      percent: normalizeNumber(config.checkinPercent, 10),
       active: true,
     };
 
@@ -393,74 +416,123 @@ export default function App() {
 
         return {
           ...customer,
-          points: Number(customer.points || 0) + 10,
-          visits: Number(customer.visits || 0) + 1,
+          points: normalizeNumber(customer.points) + 10,
+          visits: normalizeNumber(customer.visits) + 1,
           coupons: [coupon, ...(customer.coupons || [])],
         };
       })
     );
   };
 
+  const adminProps = {
+    onBack: handleBackToAccess,
+    customers,
+    products,
+    orders,
+    promos,
+    config,
+    selectedCustomerId,
+    onSelectCustomer: handleSelectCustomer,
+    onAddCustomer: handleAddCustomer,
+    onUpdateCustomer: handleUpdateCustomer,
+    onDeleteCustomer: handleDeleteCustomer,
+    onAddProduct: handleAddProduct,
+    onUpdateProduct: handleUpdateProduct,
+    onDeleteProduct: handleDeleteProduct,
+    onAddOrder: handleAddOrder,
+    onAddPromo: handleAddPromo,
+    onUpdatePromo: handleUpdatePromo,
+    onDeletePromo: handleDeletePromo,
+    onAddBonus: handleAddBonus,
+    onSaveConfig: handleSaveConfig,
+  };
+
+  const customerProps =
+    customerWithPromos && {
+      customer: {
+        ...customerWithPromos,
+        nextRewardAt: config.spendGoal,
+        progress: customerProgress,
+      },
+      onBack: handleBackToAccess,
+      onCheckin: handleCustomerCheckin,
+    };
+
   if (screen === "admin") {
     return (
       <div style={styles.appShell}>
-        <AdminPanel
-          onBack={handleBackToAccess}
-          customers={customers}
-          products={products}
-          orders={orders}
-          promos={promos}
-          config={config}
-          selectedCustomerId={selectedCustomerId}
-          onSelectCustomer={handleSelectCustomer}
-          onAddCustomer={handleAddCustomer}
-          onUpdateCustomer={handleUpdateCustomer}
-          onDeleteCustomer={handleDeleteCustomer}
-          onAddProduct={handleAddProduct}
-          onUpdateProduct={handleUpdateProduct}
-          onDeleteProduct={handleDeleteProduct}
-          onAddOrder={handleAddOrder}
-          onAddPromo={handleAddPromo}
-          onUpdatePromo={handleUpdatePromo}
-          onDeletePromo={handleDeletePromo}
-          onAddBonus={handleAddBonus}
-          onSaveConfig={handleSaveConfig}
-        />
+        <div style={styles.backgroundGlowTop} />
+        <div style={styles.backgroundGlowBottom} />
+        <div style={styles.contentWrap}>
+          <AdminPanel {...adminProps} />
+        </div>
       </div>
     );
   }
 
-  if (screen === "customer" && customerWithPromos) {
+  if (screen === "customer" && customerProps) {
     return (
       <div style={styles.appShell}>
-        <CustomerDashboard
-          customer={{
-            ...customerWithPromos,
-            nextRewardAt: config.spendGoal,
-            progress: customerProgress,
-          }}
-          onBack={handleBackToAccess}
-          onCheckin={handleCustomerCheckin}
-        />
+        <div style={styles.backgroundGlowTop} />
+        <div style={styles.backgroundGlowBottom} />
+        <div style={styles.contentWrap}>
+          <CustomerDashboard {...customerProps} />
+        </div>
       </div>
     );
   }
 
   return (
     <div style={styles.appShell}>
-      <AccessHubScreen
-        onCustomerEnter={handleEnterCustomer}
-        onEmployeeEnter={handleEnterAdmin}
-      />
+      <div style={styles.backgroundGlowTop} />
+      <div style={styles.backgroundGlowBottom} />
+      <div style={styles.contentWrap}>
+        <AccessHubScreen
+          onCustomerEnter={handleEnterCustomer}
+          onEmployeeEnter={handleEnterAdmin}
+        />
+      </div>
     </div>
   );
 }
 
 const styles = {
   appShell: {
+    position: "relative",
     minHeight: "100vh",
     width: "100%",
+    overflow: "hidden",
     background:
-      "radial-gradient(circle at top left, rgba(255,255,255,0.9) 0, rgba(255,255,255,0) 26%), radial-gradient(circle at bottom right, rgba(212, 193, 244, 0.32) 0, rgba(212, 193, 244, 0) 34%), linear-gradient(180deg, #f8f5ff 0, #f1ebfb 52%, #ece3f8 100%)",
+      "linear-gradient(180deg, #fcfaff 0%, #f6f1fb 48%, #efe7f7 100%)",
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    color: "#22182f",
+  },
+  contentWrap: {
+    position: "relative",
+    zIndex: 2,
+    minHeight: "100vh",
+  },
+  backgroundGlowTop: {
+    position: "absolute",
+    top: -120,
+    left: -100,
+    width: 360,
+    height: 360,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(122, 76, 180, 0.18) 0%, rgba(122, 76, 180, 0) 70%)",
+    pointerEvents: "none",
+    zIndex: 1,
+  },
+  backgroundGlowBottom: {
+    position: "absolute",
+    right: -140,
+    bottom: -160,
+    width: 420,
+    height: 420,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(182, 139, 233, 0.16) 0%, rgba(182, 139, 233, 0) 72%)",
+    pointerEvents: "none",
+    zIndex: 1,
   },
 };
