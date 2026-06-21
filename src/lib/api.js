@@ -41,6 +41,15 @@ function mapConfigFromDb(row) {
     pointsPerReal: Number(row?.points_per_real || 10),
     spendGoal: Number(row?.spend_goal || 250),
     checkinPercent: Number(row?.checkin_percent || 10),
+    branding: {
+      softwareName: row?.software_name || "Clube Base",
+      companyName: row?.company_name || "Minha Loja",
+      logoUrl: row?.logo_url || "",
+      instagramUrl: row?.instagram_url || "",
+      whatsappNumber: row?.whatsapp_number || "",
+      whatsappMessage: row?.whatsapp_message || "Olá! Vim pelo app.",
+      welcomePhrase: row?.welcome_phrase || "Seu clube de pontos da loja.",
+    },
   };
 }
 
@@ -63,7 +72,10 @@ function buildCustomer(row, orders, coupons, promos) {
     cashback: 0,
     coupons: customerCoupons.map((coupon) => ({
       id: coupon.id,
-      title: `${coupon.percent}% no próximo pedido`,
+      title:
+        coupon.coupon_type === "checkin_instagram"
+          ? `${coupon.percent}% no check-in Instagram`
+          : `${coupon.percent}% no próximo pedido`,
       code: coupon.code,
       percent: Number(coupon.percent || 0),
       active: !coupon.used,
@@ -118,6 +130,84 @@ export async function fetchAllData() {
   return { customers, products, promos, orders, config };
 }
 
+export async function fetchPendingCheckins() {
+  const { data, error } = await supabase
+    .from("checkin_requests")
+    .select("*, customers(full_name, phone)")
+    .eq("status", "pending")
+    .order("requested_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function requestInstagramCheckin({ customerId, instagramHandle, storeLabel }) {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const existingRes = await supabase
+    .from("checkin_requests")
+    .select("id")
+    .eq("customer_id", customerId)
+    .eq("status", "pending")
+    .gte("requested_at", todayStart.toISOString())
+    .limit(1);
+
+  if (existingRes.error) throw existingRes.error;
+
+  if ((existingRes.data || []).length > 0) {
+    throw new Error("Você já tem um check-in pendente hoje. Mostre no balcão para liberar.");
+  }
+
+  const { error } = await supabase.from("checkin_requests").insert({
+    customer_id: customerId,
+    instagram_handle: instagramHandle || "",
+    store_label: storeLabel || "",
+    status: "pending",
+  });
+
+  if (error) throw error;
+}
+
+export async function approveCheckin({ requestId, customerId, percent, approvedBy }) {
+  const code = `CHECKIN${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+  const couponRes = await supabase.from("coupons").insert({
+    customer_id: customerId,
+    code,
+    coupon_type: "checkin_instagram",
+    percent: Number(percent || 10),
+    used: false,
+  });
+
+  if (couponRes.error) throw couponRes.error;
+
+  const requestRes = await supabase
+    .from("checkin_requests")
+    .update({
+      status: "approved",
+      approved_at: new Date().toISOString(),
+      approved_by: approvedBy || "Equipe",
+    })
+    .eq("id", requestId);
+
+  if (requestRes.error) throw requestRes.error;
+}
+
+export async function rejectCheckin({ requestId, approvedBy, notes }) {
+  const { error } = await supabase
+    .from("checkin_requests")
+    .update({
+      status: "rejected",
+      approved_at: new Date().toISOString(),
+      approved_by: approvedBy || "Equipe",
+      notes: notes || "Check-in não validado no balcão.",
+    })
+    .eq("id", requestId);
+
+  if (error) throw error;
+}
+
 export async function createCustomer(payload) {
   const { error } = await supabase.from("customers").insert({
     full_name: payload.name,
@@ -157,6 +247,9 @@ export async function deleteCustomer(customerId) {
 
   const ordersDelete = await supabase.from("orders").delete().eq("customer_id", customerId);
   if (ordersDelete.error) throw ordersDelete.error;
+
+  const checkinsDelete = await supabase.from("checkin_requests").delete().eq("customer_id", customerId);
+  if (checkinsDelete.error) throw checkinsDelete.error;
 
   const customerDelete = await supabase.from("customers").delete().eq("id", customerId);
   if (customerDelete.error) throw customerDelete.error;
@@ -231,6 +324,13 @@ export async function saveConfig(payload) {
       points_per_real: Number(payload.pointsPerReal || 10),
       spend_goal: Number(payload.spendGoal || 250),
       checkin_percent: Number(payload.checkinPercent || 10),
+      software_name: payload.softwareName || "Clube Base",
+      company_name: payload.companyName || "Minha Loja",
+      logo_url: payload.logoUrl || "",
+      instagram_url: payload.instagramUrl || "",
+      whatsapp_number: payload.whatsappNumber || "",
+      whatsapp_message: payload.whatsappMessage || "Olá! Vim pelo app.",
+      welcome_phrase: payload.welcomePhrase || "Seu clube de pontos da loja.",
     })
     .eq("id", 1);
 
@@ -275,32 +375,6 @@ export async function createOrder(payload, config) {
       points: Number(customerRes.data.points || 0) + total * Number(config.pointsPerReal || 10),
     })
     .eq("id", payload.customerId);
-
-  if (updateRes.error) throw updateRes.error;
-}
-
-export async function customerCheckin(customerId, checkinPercent) {
-  const customerRes = await supabase.from("customers").select("points").eq("id", customerId).single();
-  if (customerRes.error) throw customerRes.error;
-
-  const code = `CHECKIN${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-
-  const couponRes = await supabase.from("coupons").insert({
-    customer_id: customerId,
-    code,
-    coupon_type: "checkin",
-    percent: Number(checkinPercent || 10),
-    used: false,
-  });
-
-  if (couponRes.error) throw couponRes.error;
-
-  const updateRes = await supabase
-    .from("customers")
-    .update({
-      points: Number(customerRes.data.points || 0) + 10,
-    })
-    .eq("id", customerId);
 
   if (updateRes.error) throw updateRes.error;
 }

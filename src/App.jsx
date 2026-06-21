@@ -4,137 +4,32 @@ import CustomerLoginScreen from "./screens/auth/CustomerLoginScreen";
 import StaffLoginScreen from "./screens/auth/StaffLoginScreen";
 import CustomerDashboard from "./screens/customer/CustomerDashboard";
 import AdminPanel from "./screens/admin/AdminPanel";
+import {
+  addBonus,
+  createCustomer,
+  createOrder,
+  createProduct,
+  createPromo,
+  customerCheckin,
+  deleteCustomer,
+  deleteProduct,
+  deletePromo,
+  fetchAllData,
+  saveConfig,
+  updateCustomer,
+  updateProduct,
+  updatePromo,
+} from "./lib/api";
 
-const STORAGE_KEYS = {
-  config: "savana_config",
-  customers: "savana_customers",
-  products: "savana_products",
-  orders: "savana_orders",
-  promos: "savana_promos",
-  staffUsers: "savana_staff_users",
-  staffSession: "savana_staff_session",
-  selectedCustomerId: "savana_selected_customer_id",
+const initialBranding = {
+  softwareName: "Clube Base",
+  companyName: "Minha Loja",
+  logoUrl: "",
+  instagramUrl: "",
+  whatsappNumber: "",
+  whatsappMessage: "Olá! Vim pelo app.",
+  welcomePhrase: "Seu clube de pontos da loja.",
 };
-
-const MASTER_CREDENTIALS = {
-  login: "volttaadm",
-  password: "@vtt010203",
-  name: "Administrador Master",
-  role: "master",
-  companyId: "default-company",
-};
-
-const initialConfig = {
-  pointsPerReal: 10,
-  spendGoal: 250,
-  checkinPercent: 10,
-  branding: {
-    softwareName: "Clube Base",
-    companyName: "Savana Açaí & Sorvetes",
-    logoUrl: "",
-    instagramUrl: "",
-    whatsappNumber: "",
-    whatsappMessage: "Olá! Vim pelo app.",
-    welcomePhrase: "Seu clube de pontos da loja.",
-  },
-};
-
-const initialCustomers = [
-  {
-    id: "c1",
-    name: "Cliente Base",
-    phone: "(75) 99999-0000",
-    birth: "",
-    pin: "1234",
-    email: "cliente@loja.com",
-    address: "Centro",
-    tier: "Bronze",
-    points: 180,
-    totalSpent: 18,
-    visits: 6,
-    cashback: 12,
-    coupons: [
-      { id: "cp1", title: "10% no próximo pedido", code: "BEMVINDO10", percent: 10, active: true },
-      { id: "cp2", title: "Check-in premiado", code: "CHECKIN5", percent: 5, active: true },
-    ],
-    promotions: [],
-    history: [{ id: "h1", product: "Açaí 500 ml", amount: 18, date: new Date().toISOString() }],
-  },
-];
-
-const initialProducts = [
-  {
-    id: "p1",
-    name: "Açaí 500 ml",
-    category: "Açaí",
-    price: 18,
-    description: "Açaí tradicional com montagem livre.",
-    available: true,
-  },
-  {
-    id: "p2",
-    name: "Copo 300 ml",
-    category: "Açaí",
-    price: 14,
-    description: "Versão compacta para consumo rápido.",
-    available: true,
-  },
-];
-
-const initialOrders = [
-  {
-    id: "o1",
-    customerId: "c1",
-    customerName: "Cliente Base",
-    productId: "p1",
-    productName: "Açaí 500 ml",
-    channel: "Balcão",
-    status: "Recebido",
-    total: 18,
-    note: "Sem banana",
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const initialPromos = [
-  {
-    id: "m1",
-    title: "Happy Hour",
-    type: "Happy Hour",
-    description: "Desconto especial em horários selecionados.",
-    image: "",
-  },
-];
-
-const initialStaffUsers = [
-  {
-    id: "s1",
-    email: "admin@voltta.local",
-    login: "001",
-    username: "@admin",
-    employeeId: "001",
-    phone: "(75) 99999-1111",
-    password: "1234",
-    pin: "1234",
-    name: "Administrador",
-    role: "owner",
-    companyId: "default-company",
-    active: true,
-  },
-];
-
-function uid(prefix) {
-  return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function readStorage(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 function buildWhatsappLink(number, message = "") {
   const digits = String(number || "").replace(/\D/g, "");
@@ -145,67 +40,83 @@ function buildWhatsappLink(number, message = "") {
     : `https://wa.me/${digits}`;
 }
 
-function normalize(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
 export default function App() {
   const [screen, setScreen] = useState("access");
-  const [config, setConfig] = useState(() => readStorage(STORAGE_KEYS.config, initialConfig));
-  const [customers, setCustomers] = useState(() => readStorage(STORAGE_KEYS.customers, initialCustomers));
-  const [products, setProducts] = useState(() => readStorage(STORAGE_KEYS.products, initialProducts));
-  const [orders, setOrders] = useState(() => readStorage(STORAGE_KEYS.orders, initialOrders));
-  const [promos, setPromos] = useState(() => readStorage(STORAGE_KEYS.promos, initialPromos));
-  const [staffUsers, setStaffUsers] = useState(() => readStorage(STORAGE_KEYS.staffUsers, initialStaffUsers));
-  const [selectedCustomerId, setSelectedCustomerId] = useState(() =>
-    readStorage(STORAGE_KEYS.selectedCustomerId, "c1")
-  );
-  const [staffSession, setStaffSession] = useState(() =>
-    readStorage(STORAGE_KEYS.staffSession, null)
-  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [config, setConfig] = useState({
+    pointsPerReal: 10,
+    spendGoal: 250,
+    checkinPercent: 10,
+  });
+
+  const [branding, setBranding] = useState(initialBranding);
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [promos, setPromos] = useState([]);
+  const [staffUsers, setStaffUsers] = useState([
+    {
+      id: "s1",
+      name: "Administrador",
+      login: "001",
+      role: "Administrador",
+      password: "1234",
+    },
+  ]);
+
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customerSession, setCustomerSession] = useState(null);
+  const [staffSession, setStaffSession] = useState(null);
+
+  async function loadAppData() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await fetchAllData();
+
+      setCustomers(data.customers || []);
+      setProducts(data.products || []);
+      setOrders(data.orders || []);
+      setPromos(data.promos || []);
+
+      setConfig({
+        pointsPerReal: Number(data.config?.pointsPerReal || 10),
+        spendGoal: Number(data.config?.spendGoal || 250),
+        checkinPercent: Number(data.config?.checkinPercent || 10),
+      });
+
+      setBranding({
+        softwareName: data.config?.branding?.softwareName || "Clube Base",
+        companyName: data.config?.branding?.companyName || "Minha Loja",
+        logoUrl: data.config?.branding?.logoUrl || "",
+        instagramUrl: data.config?.branding?.instagramUrl || "",
+        whatsappNumber: data.config?.branding?.whatsappNumber || "",
+        whatsappMessage: data.config?.branding?.whatsappMessage || "Olá! Vim pelo app.",
+        welcomePhrase: data.config?.branding?.welcomePhrase || "Seu clube de pontos da loja.",
+      });
+
+      setSelectedCustomerId((current) => {
+        if (current && (data.customers || []).some((customer) => customer.id === current)) {
+          return current;
+        }
+        return data.customers?.[0]?.id || "";
+      });
+    } catch (err) {
+      setError(err?.message || "Erro ao carregar dados.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-  }, [config]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(customers));
-  }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.promos, JSON.stringify(promos));
-  }, [promos]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.staffUsers, JSON.stringify(staffUsers));
-  }, [staffUsers]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.staffSession, JSON.stringify(staffSession));
-  }, [staffSession]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.selectedCustomerId, JSON.stringify(selectedCustomerId));
-  }, [selectedCustomerId]);
+    loadAppData();
+  }, []);
 
   const selectedCustomer =
     customers.find((customer) => customer.id === selectedCustomerId) || customers[0] || null;
-
-  const branding = config?.branding || initialConfig.branding;
-  const whatsappLink = buildWhatsappLink(branding.whatsappNumber, branding.whatsappMessage);
 
   const customerWithPromos = selectedCustomer
     ? {
@@ -222,6 +133,8 @@ export default function App() {
     return Math.min((current / total) * 100, 100);
   }, [customerWithPromos, config]);
 
+  const whatsappLink = buildWhatsappLink(branding.whatsappNumber, branding.whatsappMessage);
+
   const handleBackToAccess = () => {
     setScreen("access");
     setCustomerSession(null);
@@ -232,9 +145,9 @@ export default function App() {
   const handleEnterStaffArea = () => setScreen("staff-login");
 
   const handleCustomerLogin = ({ phone, pin }) => {
-    const normalizedPhone = onlyDigits(phone);
+    const normalizedPhone = String(phone || "").replace(/\D/g, "");
     const found = customers.find((customer) => {
-      const customerPhone = onlyDigits(customer.phone);
+      const customerPhone = String(customer.phone || "").replace(/\D/g, "");
       return customerPhone === normalizedPhone && String(customer.pin || "") === String(pin || "").trim();
     });
 
@@ -247,52 +160,17 @@ export default function App() {
   };
 
   const handleStaffLogin = ({ login, password }) => {
-    const normalizedLogin = normalize(login);
-    const normalizedPassword = String(password || "").trim();
-
-    if (
-      normalizedLogin === MASTER_CREDENTIALS.login.toLowerCase() &&
-      normalizedPassword === MASTER_CREDENTIALS.password
-    ) {
-      const session = {
-        staffId: "master-account",
-        role: MASTER_CREDENTIALS.role,
-        companyId: MASTER_CREDENTIALS.companyId,
-        name: MASTER_CREDENTIALS.name,
-        email: "",
-        isMaster: true,
-      };
-
-      setStaffSession(session);
-      setScreen("admin");
-      return { ok: true };
-    }
-
+    const normalizedLogin = String(login || "").trim().toLowerCase();
     const found = staffUsers.find((user) => {
-      const byEmail = normalize(user.email) === normalizedLogin;
-      const byLogin = normalize(user.login) === normalizedLogin;
-      const byUsername = normalize(user.username) === normalizedLogin;
-      const byEmployeeId = normalize(user.employeeId) === normalizedLogin;
-      const validPassword =
-        String(user.password || "").trim() === normalizedPassword ||
-        String(user.pin || "").trim() === normalizedPassword;
-
-      return (byEmail || byLogin || byUsername || byEmployeeId) && validPassword;
+      return (
+        String(user.login || "").trim().toLowerCase() === normalizedLogin &&
+        String(user.password || "") === String(password || "")
+      );
     });
 
-    if (!found) return { ok: false, message: "Usuário, matrícula ou senha inválidos." };
-    if (found.active === false) return { ok: false, message: "Usuário inativo." };
+    if (!found) return { ok: false, message: "Usuário ou senha inválidos." };
 
-    const session = {
-      staffId: found.id,
-      role: found.role,
-      companyId: found.companyId || "default-company",
-      name: found.name,
-      email: found.email || "",
-      isMaster: false,
-    };
-
-    setStaffSession(session);
+    setStaffSession({ staffId: found.id });
     setScreen("admin");
     return { ok: true };
   };
@@ -311,262 +189,166 @@ export default function App() {
     setSelectedCustomerId(customerId);
   };
 
-  const handleAddCustomer = (payload) => {
-    const newCustomer = {
-      id: uid("c"),
-      name: payload.name,
-      phone: payload.phone,
-      birth: payload.birth || "",
-      pin: payload.pin,
-      email: payload.email || "",
-      address: payload.address || "",
-      tier: payload.tier || "Bronze",
-      points: 0,
-      totalSpent: 0,
-      visits: 0,
-      cashback: 0,
-      coupons: [],
-      promotions: [],
-      history: [],
-    };
-
-    setCustomers((prev) => [newCustomer, ...prev]);
-    setSelectedCustomerId(newCustomer.id);
+  const handleAddCustomer = async (payload) => {
+    await createCustomer(payload);
+    await loadAppData();
   };
 
-  const handleUpdateCustomer = (payload) => {
-    setCustomers((prev) =>
-      prev.map((customer) =>
-        customer.id === payload.id
-          ? {
-              ...customer,
-              name: payload.name,
-              phone: payload.phone,
-              birth: payload.birth || "",
-              pin: payload.pin,
-              email: payload.email || "",
-              address: payload.address || "",
-              tier: payload.tier || "Bronze",
-            }
-          : customer
-      )
-    );
+  const handleUpdateCustomer = async (payload) => {
+    await updateCustomer(payload);
+    await loadAppData();
     setSelectedCustomerId(payload.id);
   };
 
-  const handleDeleteCustomer = (customerId) => {
-    const remaining = customers.filter((customer) => customer.id !== customerId);
-    setCustomers(remaining);
-    setOrders((prev) => prev.filter((order) => order.customerId !== customerId));
-
-    if (selectedCustomerId === customerId) {
-      setSelectedCustomerId(remaining[0]?.id || "");
-    }
+  const handleDeleteCustomer = async (customerId) => {
+    await deleteCustomer(customerId);
+    await loadAppData();
   };
 
-  const handleAddProduct = (payload) => {
-    const newProduct = {
-      id: uid("p"),
-      name: payload.name,
-      category: payload.category,
-      price: Number(payload.price),
-      description: payload.description || "",
-      available: payload.available,
-    };
-    setProducts((prev) => [newProduct, ...prev]);
+  const handleAddProduct = async (payload) => {
+    await createProduct(payload);
+    await loadAppData();
   };
 
-  const handleUpdateProduct = (payload) => {
-    setProducts((prev) =>
-      prev.map((product) =>
-        product.id === payload.id
-          ? {
-              ...product,
-              name: payload.name,
-              category: payload.category,
-              price: Number(payload.price),
-              description: payload.description || "",
-              available: payload.available,
-            }
-          : product
-      )
-    );
+  const handleUpdateProduct = async (payload) => {
+    await updateProduct(payload);
+    await loadAppData();
   };
 
-  const handleDeleteProduct = (productId) => {
-    setProducts((prev) => prev.filter((product) => product.id !== productId));
+  const handleDeleteProduct = async (productId) => {
+    await deleteProduct(productId);
+    await loadAppData();
   };
 
-  const handleAddPromo = (payload) => {
-    const newPromo = {
-      id: uid("m"),
-      title: payload.title,
-      type: payload.type,
-      description: payload.description,
-      image: payload.image || "",
-    };
-    setPromos((prev) => [newPromo, ...prev]);
+  const handleAddPromo = async (payload) => {
+    await createPromo(payload);
+    await loadAppData();
   };
 
-  const handleUpdatePromo = (payload) => {
-    setPromos((prev) =>
-      prev.map((promo) =>
-        promo.id === payload.id
-          ? {
-              ...promo,
-              title: payload.title,
-              type: payload.type,
-              description: payload.description,
-              image: payload.image || "",
-            }
-          : promo
-      )
-    );
+  const handleUpdatePromo = async (payload) => {
+    await updatePromo(payload);
+    await loadAppData();
   };
 
-  const handleDeletePromo = (promoId) => {
-    setPromos((prev) => prev.filter((promo) => promo.id !== promoId));
+  const handleDeletePromo = async (promoId) => {
+    await deletePromo(promoId);
+    await loadAppData();
   };
 
-  const handleSaveConfig = (payload) => {
+  const handleSaveConfig = async (payload) => {
+    await saveConfig(payload);
+
     setConfig({
       pointsPerReal: Number(payload.pointsPerReal || 10),
       spendGoal: Number(payload.spendGoal || 250),
       checkinPercent: Number(payload.checkinPercent || 10),
-      branding: {
-        softwareName: payload.softwareName || "Clube Base",
-        companyName: payload.companyName || "Minha Loja",
-        logoUrl: payload.logoUrl || "",
-        instagramUrl: payload.instagramUrl || "",
-        whatsappNumber: payload.whatsappNumber || "",
-        whatsappMessage: payload.whatsappMessage || "Olá! Vim pelo app.",
-        welcomePhrase: payload.welcomePhrase || "Seu clube de pontos da loja.",
-      },
+    });
+
+    setBranding({
+      softwareName: payload.softwareName || "Clube Base",
+      companyName: payload.companyName || "Minha Loja",
+      logoUrl: payload.logoUrl || "",
+      instagramUrl: payload.instagramUrl || "",
+      whatsappNumber: payload.whatsappNumber || "",
+      whatsappMessage: payload.whatsappMessage || "Olá! Vim pelo app.",
+      welcomePhrase: payload.welcomePhrase || "Seu clube de pontos da loja.",
     });
   };
 
   const handleAddStaffUser = (payload) => {
-    const newUser = {
-      id: uid("s"),
-      email: payload.email || "",
-      login: payload.login || "",
-      username: payload.username || "",
-      employeeId: payload.employeeId || "",
-      phone: payload.phone || "",
-      role: payload.role || "staff",
-      password: payload.password,
-      pin: payload.pin || "",
-      name: payload.name,
-      companyId: payload.companyId || "default-company",
-      active: payload.active ?? true,
-    };
-    setStaffUsers((prev) => [newUser, ...prev]);
-  };
-
-  const handleUpdateStaffUser = (payload) => {
-    setStaffUsers((prev) =>
-      prev.map((user) =>
-        user.id === payload.id
-          ? {
-              ...user,
-              email: payload.email || "",
-              login: payload.login || "",
-              username: payload.username || "",
-              employeeId: payload.employeeId || "",
-              phone: payload.phone || "",
-              role: payload.role || "staff",
-              password: payload.password,
-              pin: payload.pin || "",
-              name: payload.name,
-              companyId: payload.companyId || "default-company",
-              active: payload.active ?? true,
-            }
-          : user
-      )
-    );
+    setStaffUsers((prev) => [
+      {
+        id: `s_${Math.random().toString(36).slice(2, 9)}`,
+        name: payload.name,
+        login: payload.login,
+        role: payload.role || "Funcionário",
+        password: payload.password,
+      },
+      ...prev,
+    ]);
   };
 
   const handleDeleteStaffUser = (staffId) => {
     setStaffUsers((prev) => prev.filter((user) => user.id !== staffId));
   };
 
-  const handleAddBonus = ({ customerId, points }) => {
-    const bonus = Number(points || 0);
-    if (!customerId || !bonus) return;
-
-    setCustomers((prev) =>
-      prev.map((customer) =>
-        customer.id === customerId ? { ...customer, points: Number(customer.points || 0) + bonus } : customer
-      )
-    );
+  const handleAddBonus = async ({ customerId, points }) => {
+    await addBonus({ customerId, points });
+    await loadAppData();
   };
 
-  const handleAddOrder = (payload) => {
-    const customer = customers.find((item) => item.id === payload.customerId);
-    const product = products.find((item) => item.id === payload.productId);
-    const total = Number(payload.total || 0);
-    if (!customer || !product || !total) return;
-
-    const newOrder = {
-      id: uid("o"),
-      customerId: customer.id,
-      customerName: customer.name,
-      productId: product.id,
-      productName: product.name,
-      channel: payload.channel,
-      status: payload.status,
-      total,
-      note: payload.note || "",
-      createdAt: new Date().toISOString(),
-    };
-
-    setOrders((prev) => [newOrder, ...prev]);
-
-    setCustomers((prev) =>
-      prev.map((item) => {
-        if (item.id !== customer.id) return item;
-        return {
-          ...item,
-          totalSpent: Number(item.totalSpent || 0) + total,
-          points: Number(item.points || 0) + total * Number(config.pointsPerReal || 10),
-          visits: Number(item.visits || 0) + 1,
-          history: [
-            {
-              id: uid("h"),
-              product: product.name,
-              amount: total,
-              date: new Date().toISOString(),
-            },
-            ...(item.history || []),
-          ],
-        };
-      })
-    );
+  const handleAddOrder = async (payload) => {
+    await createOrder(payload, config);
+    await loadAppData();
   };
 
-  const handleCustomerCheckin = () => {
+  const handleCustomerCheckin = async () => {
     if (!customerWithPromos) return;
-
-    const coupon = {
-      id: uid("cp"),
-      title: `${config.checkinPercent}% no check-in`,
-      code: `CHECKIN${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
-      percent: Number(config.checkinPercent || 10),
-      active: true,
-    };
-
-    setCustomers((prev) =>
-      prev.map((customer) => {
-        if (customer.id !== customerWithPromos.id) return customer;
-        return {
-          ...customer,
-          points: Number(customer.points || 0) + 10,
-          visits: Number(customer.visits || 0) + 1,
-          coupons: [coupon, ...(customer.coupons || [])],
-        };
-      })
-    );
+    await customerCheckin(customerWithPromos.id, config.checkinPercent);
+    await loadAppData();
   };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          background: "linear-gradient(180deg, #f7f2ff 0%, #efe7fb 100%)",
+          color: "#5f2d79",
+          fontWeight: 700,
+          padding: "24px",
+        }}
+      >
+        Carregando dados...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          background: "linear-gradient(180deg, #f7f2ff 0%, #efe7fb 100%)",
+          padding: "24px",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 520,
+            width: "100%",
+            background: "#fff",
+            border: "1px solid #eadff7",
+            borderRadius: 24,
+            padding: 24,
+            boxShadow: "0 20px 50px rgba(90, 54, 119, 0.14)",
+          }}
+        >
+          <h2 style={{ marginTop: 0, color: "#341c45" }}>Erro de conexão</h2>
+          <p style={{ color: "#7e6d93", lineHeight: 1.6 }}>{error}</p>
+          <button
+            type="button"
+            onClick={loadAppData}
+            style={{
+              border: 0,
+              borderRadius: 14,
+              padding: "12px 16px",
+              background: "linear-gradient(135deg, #5f2d79 0%, #8151a4 100%)",
+              color: "#fff",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (screen === "customer-login") {
     return (
@@ -584,7 +366,6 @@ export default function App() {
         onBack={handleBackToAccess}
         onLogin={handleStaffLogin}
         branding={branding}
-        recoveryWhatsappLink={whatsappLink}
       />
     );
   }
@@ -612,7 +393,7 @@ export default function App() {
         products={products}
         orders={orders}
         promos={promos}
-        config={config}
+        config={{ ...config, branding }}
         staffUsers={staffUsers}
         selectedCustomerId={selectedCustomerId}
         onSelectCustomer={handleSelectCustomer}
@@ -629,11 +410,9 @@ export default function App() {
         onAddBonus={handleAddBonus}
         onSaveConfig={handleSaveConfig}
         onAddStaffUser={handleAddStaffUser}
-        onUpdateStaffUser={handleUpdateStaffUser}
         onDeleteStaffUser={handleDeleteStaffUser}
         branding={branding}
         whatsappLink={whatsappLink}
-        staffSession={staffSession}
       />
     );
   }
