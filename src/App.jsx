@@ -6,15 +6,18 @@ import CustomerDashboard from "./screens/customer/CustomerDashboard";
 import AdminPanel from "./screens/admin/AdminPanel";
 import {
   addBonus,
+  approveCheckin,
   createCustomer,
   createOrder,
   createProduct,
   createPromo,
-  customerCheckin,
   deleteCustomer,
   deleteProduct,
   deletePromo,
   fetchAllData,
+  fetchPendingCheckins,
+  rejectCheckin,
+  requestInstagramCheckin,
   saveConfig,
   updateCustomer,
   updateProduct,
@@ -56,6 +59,8 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [promos, setPromos] = useState([]);
+  const [pendingCheckins, setPendingCheckins] = useState([]);
+
   const [staffUsers, setStaffUsers] = useState([
     {
       id: "s1",
@@ -75,12 +80,16 @@ export default function App() {
     setError("");
 
     try {
-      const data = await fetchAllData();
+      const [data, pending] = await Promise.all([
+        fetchAllData(),
+        fetchPendingCheckins(),
+      ]);
 
       setCustomers(data.customers || []);
       setProducts(data.products || []);
       setOrders(data.orders || []);
       setPromos(data.promos || []);
+      setPendingCheckins(pending || []);
 
       setConfig({
         pointsPerReal: Number(data.config?.pointsPerReal || 10),
@@ -170,7 +179,7 @@ export default function App() {
 
     if (!found) return { ok: false, message: "Usuário ou senha inválidos." };
 
-    setStaffSession({ staffId: found.id });
+    setStaffSession({ staffId: found.id, name: found.name });
     setScreen("admin");
     return { ok: true };
   };
@@ -282,9 +291,41 @@ export default function App() {
     await loadAppData();
   };
 
-  const handleCustomerCheckin = async () => {
+  const handleInstagramCheckinRequest = async () => {
     if (!customerWithPromos) return;
-    await customerCheckin(customerWithPromos.id, config.checkinPercent);
+
+    await requestInstagramCheckin({
+      customerId: customerWithPromos.id,
+      instagramHandle: branding.instagramUrl || "",
+      storeLabel: branding.companyName || "Minha Loja",
+    });
+
+    window.alert(
+      `Agora poste um Story marcando ${
+        branding.instagramUrl || "@sua_loja"
+      } e mostre no balcão para liberar seu desconto.`
+    );
+
+    await loadAppData();
+  };
+
+  const handleApproveCheckin = async (request) => {
+    await approveCheckin({
+      requestId: request.id,
+      customerId: request.customer_id,
+      percent: config.checkinPercent,
+      approvedBy: staffSession?.name || "Equipe",
+    });
+
+    await loadAppData();
+  };
+
+  const handleRejectCheckin = async (request) => {
+    await rejectCheckin({
+      requestId: request.id,
+      approvedBy: staffSession?.name || "Equipe",
+    });
+
     await loadAppData();
   };
 
@@ -376,7 +417,7 @@ export default function App() {
         customer={customerWithPromos}
         progress={customerProgress}
         onBack={handleBackToAccess}
-        onCheckin={handleCustomerCheckin}
+        onCheckin={handleInstagramCheckinRequest}
         onLogout={handleLogoutCustomer}
         branding={branding}
         whatsappLink={whatsappLink}
@@ -395,6 +436,9 @@ export default function App() {
         promos={promos}
         config={{ ...config, branding }}
         staffUsers={staffUsers}
+        pendingCheckins={pendingCheckins}
+        onApproveCheckin={handleApproveCheckin}
+        onRejectCheckin={handleRejectCheckin}
         selectedCustomerId={selectedCustomerId}
         onSelectCustomer={handleSelectCustomer}
         onAddCustomer={handleAddCustomer}
