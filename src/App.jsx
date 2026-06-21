@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   products: "savana_products",
   orders: "savana_orders",
   promos: "savana_promos",
+  staffUsers: "savana_staff_users",
   selectedCustomerId: "savana_selected_customer_id",
 };
 
@@ -16,6 +17,13 @@ const initialConfig = {
   pointsPerReal: 10,
   spendGoal: 250,
   checkinPercent: 10,
+  softwareName: "Clube Base",
+  companyName: "Minha Loja",
+  logoUrl: "",
+  instagramUrl: "",
+  whatsappNumber: "",
+  whatsappMessage: "Olá! Vim pelo app.",
+  welcomePhrase: "Seu clube de pontos da loja.",
 };
 
 const initialCustomers = [
@@ -100,6 +108,18 @@ const initialPromos = [
     title: "Happy Hour Savana",
     type: "Happy Hour",
     description: "Desconto especial em horários selecionados.",
+    image: "",
+  },
+];
+
+const initialStaffUsers = [
+  {
+    id: "staff_1",
+    name: "Administrador",
+    login: "admin",
+    role: "Administrador",
+    password: "123456",
+    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -114,15 +134,6 @@ function readStorage(key, fallback) {
   } catch {
     return fallback;
   }
-}
-
-function writeStorage(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function normalizeNumber(value, fallback = 0) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 export default function App() {
@@ -143,69 +154,74 @@ export default function App() {
   const [promos, setPromos] = useState(() =>
     readStorage(STORAGE_KEYS.promos, initialPromos)
   );
+  const [staffUsers, setStaffUsers] = useState(() =>
+    readStorage(STORAGE_KEYS.staffUsers, initialStaffUsers)
+  );
   const [selectedCustomerId, setSelectedCustomerId] = useState(() =>
     readStorage(STORAGE_KEYS.selectedCustomerId, "c1")
   );
 
   useEffect(() => {
-    writeStorage(STORAGE_KEYS.config, config);
+    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
   }, [config]);
 
   useEffect(() => {
-    writeStorage(STORAGE_KEYS.customers, customers);
+    localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(customers));
   }, [customers]);
 
   useEffect(() => {
-    writeStorage(STORAGE_KEYS.products, products);
+    localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    writeStorage(STORAGE_KEYS.orders, orders);
+    localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
-    writeStorage(STORAGE_KEYS.promos, promos);
+    localStorage.setItem(STORAGE_KEYS.promos, JSON.stringify(promos));
   }, [promos]);
 
   useEffect(() => {
-    writeStorage(STORAGE_KEYS.selectedCustomerId, selectedCustomerId);
+    localStorage.setItem(STORAGE_KEYS.staffUsers, JSON.stringify(staffUsers));
+  }, [staffUsers]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.selectedCustomerId,
+      JSON.stringify(selectedCustomerId)
+    );
   }, [selectedCustomerId]);
 
-  const selectedCustomer = useMemo(() => {
-    return (
-      customers.find((customer) => customer.id === selectedCustomerId) ||
-      customers[0] ||
-      null
-    );
-  }, [customers, selectedCustomerId]);
+  const selectedCustomer =
+    customers.find((customer) => customer.id === selectedCustomerId) ||
+    customers[0] ||
+    null;
 
-  const customerWithPromos = useMemo(() => {
-    if (!selectedCustomer) return null;
-
-    return {
-      ...selectedCustomer,
-      promotions: promos.map((promo) => promo.description),
-    };
-  }, [selectedCustomer, promos]);
+  const customerWithPromos = selectedCustomer
+    ? {
+        ...selectedCustomer,
+        nextRewardAt: config.spendGoal || 250,
+        promotions: promos.map((promo) => promo.description),
+      }
+    : null;
 
   const customerProgress = useMemo(() => {
     if (!customerWithPromos) return 0;
-
     const total = customerWithPromos.nextRewardAt || config.spendGoal || 250;
     const current = customerWithPromos.points || 0;
-
     return Math.min((current / total) * 100, 100);
   }, [customerWithPromos, config]);
 
   const handleEnterCustomer = () => setScreen("customer");
   const handleEnterAdmin = () => setScreen("admin");
   const handleBackToAccess = () => setScreen("access");
+  const handleLogout = () => setScreen("access");
 
   const handleSelectCustomer = (customerId) => {
     setSelectedCustomerId(customerId);
   };
 
-  const handleAddCustomer = (payload) => {
+  const handleAddCustomer = async (payload) => {
     const newCustomer = {
       id: uid("c"),
       name: payload.name,
@@ -228,7 +244,7 @@ export default function App() {
     setSelectedCustomerId(newCustomer.id);
   };
 
-  const handleUpdateCustomer = (payload) => {
+  const handleUpdateCustomer = async (payload) => {
     setCustomers((prev) =>
       prev.map((customer) =>
         customer.id === payload.id
@@ -249,33 +265,30 @@ export default function App() {
     setSelectedCustomerId(payload.id);
   };
 
-  const handleDeleteCustomer = (customerId) => {
-    const remainingCustomers = customers.filter(
-      (customer) => customer.id !== customerId
-    );
-
-    setCustomers(remainingCustomers);
+  const handleDeleteCustomer = async (customerId) => {
+    setCustomers((prev) => prev.filter((customer) => customer.id !== customerId));
     setOrders((prev) => prev.filter((order) => order.customerId !== customerId));
 
     if (selectedCustomerId === customerId) {
-      setSelectedCustomerId(remainingCustomers[0]?.id || "");
+      const remaining = customers.filter((customer) => customer.id !== customerId);
+      setSelectedCustomerId(remaining[0]?.id || "");
     }
   };
 
-  const handleAddProduct = (payload) => {
+  const handleAddProduct = async (payload) => {
     const newProduct = {
       id: uid("p"),
       name: payload.name,
       category: payload.category,
-      price: normalizeNumber(payload.price),
+      price: Number(payload.price),
       description: payload.description || "",
-      available: Boolean(payload.available),
+      available: payload.available,
     };
 
     setProducts((prev) => [newProduct, ...prev]);
   };
 
-  const handleUpdateProduct = (payload) => {
+  const handleUpdateProduct = async (payload) => {
     setProducts((prev) =>
       prev.map((product) =>
         product.id === payload.id
@@ -283,31 +296,32 @@ export default function App() {
               ...product,
               name: payload.name,
               category: payload.category,
-              price: normalizeNumber(payload.price),
+              price: Number(payload.price),
               description: payload.description || "",
-              available: Boolean(payload.available),
+              available: payload.available,
             }
           : product
       )
     );
   };
 
-  const handleDeleteProduct = (productId) => {
+  const handleDeleteProduct = async (productId) => {
     setProducts((prev) => prev.filter((product) => product.id !== productId));
   };
 
-  const handleAddPromo = (payload) => {
+  const handleAddPromo = async (payload) => {
     const newPromo = {
       id: uid("m"),
       title: payload.title,
       type: payload.type,
       description: payload.description,
+      image: payload.image || "",
     };
 
     setPromos((prev) => [newPromo, ...prev]);
   };
 
-  const handleUpdatePromo = (payload) => {
+  const handleUpdatePromo = async (payload) => {
     setPromos((prev) =>
       prev.map((promo) =>
         promo.id === payload.id
@@ -316,48 +330,52 @@ export default function App() {
               title: payload.title,
               type: payload.type,
               description: payload.description,
+              image: payload.image || "",
             }
           : promo
       )
     );
   };
 
-  const handleDeletePromo = (promoId) => {
+  const handleDeletePromo = async (promoId) => {
     setPromos((prev) => prev.filter((promo) => promo.id !== promoId));
   };
 
-  const handleSaveConfig = (payload) => {
-    setConfig({
-      pointsPerReal: normalizeNumber(payload.pointsPerReal, 10),
-      spendGoal: normalizeNumber(payload.spendGoal, 250),
-      checkinPercent: normalizeNumber(payload.checkinPercent, 10),
-    });
+  const handleSaveConfig = async (payload) => {
+    setConfig((prev) => ({
+      ...prev,
+      pointsPerReal: Number(payload.pointsPerReal || 10),
+      spendGoal: Number(payload.spendGoal || 250),
+      checkinPercent: Number(payload.checkinPercent || 10),
+      softwareName: payload.softwareName || prev.softwareName || "Clube Base",
+      companyName: payload.companyName || prev.companyName || "Minha Loja",
+      logoUrl: payload.logoUrl || "",
+      instagramUrl: payload.instagramUrl || "",
+      whatsappNumber: payload.whatsappNumber || "",
+      whatsappMessage: payload.whatsappMessage || "Olá! Vim pelo app.",
+      welcomePhrase: payload.welcomePhrase || "Seu clube de pontos da loja.",
+    }));
   };
 
-  const handleAddBonus = ({ customerId, points }) => {
-    const bonus = normalizeNumber(points);
+  const handleAddBonus = async ({ customerId, points }) => {
+    const bonus = Number(points || 0);
     if (!customerId || !bonus) return;
 
     setCustomers((prev) =>
       prev.map((customer) =>
         customer.id === customerId
-          ? {
-              ...customer,
-              points: normalizeNumber(customer.points) + bonus,
-            }
+          ? { ...customer, points: Number(customer.points || 0) + bonus }
           : customer
       )
     );
   };
 
-  const handleAddOrder = (payload) => {
+  const handleAddOrder = async (payload) => {
     const customer = customers.find((item) => item.id === payload.customerId);
     const product = products.find((item) => item.id === payload.productId);
-    const total = normalizeNumber(payload.total);
+    const total = Number(payload.total || 0);
 
     if (!customer || !product || !total) return;
-
-    const now = new Date().toISOString();
 
     const newOrder = {
       id: uid("o"),
@@ -369,7 +387,7 @@ export default function App() {
       status: payload.status,
       total,
       note: payload.note || "",
-      createdAt: now,
+      createdAt: new Date().toISOString(),
     };
 
     setOrders((prev) => [newOrder, ...prev]);
@@ -380,17 +398,15 @@ export default function App() {
 
         return {
           ...item,
-          totalSpent: normalizeNumber(item.totalSpent) + total,
-          points:
-            normalizeNumber(item.points) +
-            total * normalizeNumber(config.pointsPerReal, 10),
-          visits: normalizeNumber(item.visits) + 1,
+          totalSpent: Number(item.totalSpent || 0) + total,
+          points: Number(item.points || 0) + total * Number(config.pointsPerReal || 10),
+          visits: Number(item.visits || 0) + 1,
           history: [
             {
               id: uid("h"),
               product: product.name,
               amount: total,
-              date: now,
+              date: new Date().toISOString(),
             },
             ...(item.history || []),
           ],
@@ -399,14 +415,48 @@ export default function App() {
     );
   };
 
+  const handleAddStaffUser = async (payload) => {
+    const name = String(payload.name || "").trim();
+    const login = String(payload.login || "").trim();
+    const role = String(payload.role || "Funcionário").trim();
+    const password = String(payload.password || "").trim();
+
+    if (!name || !login || !password) {
+      throw new Error("Preencha nome, login e senha da equipe.");
+    }
+
+    const duplicatedLogin = staffUsers.some(
+      (user) => String(user.login || "").trim().toLowerCase() === login.toLowerCase()
+    );
+
+    if (duplicatedLogin) {
+      throw new Error("Já existe um usuário cadastrado com esse login.");
+    }
+
+    const newUser = {
+      id: uid("staff"),
+      name,
+      login,
+      role,
+      password,
+      createdAt: new Date().toISOString(),
+    };
+
+    setStaffUsers((prev) => [newUser, ...prev]);
+  };
+
+  const handleDeleteStaffUser = async (userId) => {
+    setStaffUsers((prev) => prev.filter((user) => user.id !== userId));
+  };
+
   const handleCustomerCheckin = () => {
     if (!customerWithPromos) return;
 
     const coupon = {
       id: uid("cp"),
-      title: `${normalizeNumber(config.checkinPercent, 10)}% no check-in`,
+      title: `${config.checkinPercent}% no check-in`,
       code: `CHECKIN${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
-      percent: normalizeNumber(config.checkinPercent, 10),
+      percent: Number(config.checkinPercent || 10),
       active: true,
     };
 
@@ -416,123 +466,102 @@ export default function App() {
 
         return {
           ...customer,
-          points: normalizeNumber(customer.points) + 10,
-          visits: normalizeNumber(customer.visits) + 1,
+          points: Number(customer.points || 0) + 10,
+          visits: Number(customer.visits || 0) + 1,
           coupons: [coupon, ...(customer.coupons || [])],
         };
       })
     );
   };
 
-  const adminProps = {
-    onBack: handleBackToAccess,
-    customers,
-    products,
-    orders,
-    promos,
-    config,
-    selectedCustomerId,
-    onSelectCustomer: handleSelectCustomer,
-    onAddCustomer: handleAddCustomer,
-    onUpdateCustomer: handleUpdateCustomer,
-    onDeleteCustomer: handleDeleteCustomer,
-    onAddProduct: handleAddProduct,
-    onUpdateProduct: handleUpdateProduct,
-    onDeleteProduct: handleDeleteProduct,
-    onAddOrder: handleAddOrder,
-    onAddPromo: handleAddPromo,
-    onUpdatePromo: handleUpdatePromo,
-    onDeletePromo: handleDeletePromo,
-    onAddBonus: handleAddBonus,
-    onSaveConfig: handleSaveConfig,
+  const branding = {
+    softwareName: config.softwareName || "Clube Base",
+    companyName: config.companyName || "Minha Loja",
+    logoUrl: config.logoUrl || "",
+    instagramUrl: config.instagramUrl || "",
+    whatsappNumber: config.whatsappNumber || "",
+    whatsappMessage: config.whatsappMessage || "Olá! Vim pelo app.",
+    welcomePhrase: config.welcomePhrase || "Seu clube de pontos da loja.",
   };
 
-  const customerProps =
-    customerWithPromos && {
-      customer: {
-        ...customerWithPromos,
-        nextRewardAt: config.spendGoal,
-        progress: customerProgress,
-      },
-      onBack: handleBackToAccess,
-      onCheckin: handleCustomerCheckin,
-    };
+  const whatsappLink = branding.whatsappNumber
+    ? `https://wa.me/${branding.whatsappNumber}?text=${encodeURIComponent(
+        branding.whatsappMessage || "Olá! Vim pelo app."
+      )}`
+    : "";
+
+  const pendingCheckins = [];
 
   if (screen === "admin") {
     return (
-      <div style={styles.appShell}>
-        <div style={styles.backgroundGlowTop} />
-        <div style={styles.backgroundGlowBottom} />
-        <div style={styles.contentWrap}>
-          <AdminPanel {...adminProps} />
-        </div>
-      </div>
+      <AdminPanel
+        onBack={handleBackToAccess}
+        onLogout={handleLogout}
+        customers={customers}
+        products={products}
+        orders={orders}
+        promos={promos}
+        config={config}
+        staffUsers={staffUsers}
+        pendingCheckins={pendingCheckins}
+        onApproveCheckin={async () => {}}
+        onRejectCheckin={async () => {}}
+        selectedCustomerId={selectedCustomerId}
+        onSelectCustomer={handleSelectCustomer}
+        onAddCustomer={handleAddCustomer}
+        onUpdateCustomer={handleUpdateCustomer}
+        onDeleteCustomer={handleDeleteCustomer}
+        onAddProduct={handleAddProduct}
+        onUpdateProduct={handleUpdateProduct}
+        onDeleteProduct={handleDeleteProduct}
+        onAddOrder={handleAddOrder}
+        onAddPromo={handleAddPromo}
+        onUpdatePromo={handleUpdatePromo}
+        onDeletePromo={handleDeletePromo}
+        onAddBonus={handleAddBonus}
+        onSaveConfig={handleSaveConfig}
+        onAddStaffUser={handleAddStaffUser}
+        onDeleteStaffUser={handleDeleteStaffUser}
+        branding={branding}
+        whatsappLink={whatsappLink}
+      />
     );
   }
 
-  if (screen === "customer" && customerProps) {
+  if (screen === "customer" && customerWithPromos) {
     return (
       <div style={styles.appShell}>
-        <div style={styles.backgroundGlowTop} />
-        <div style={styles.backgroundGlowBottom} />
-        <div style={styles.contentWrap}>
-          <CustomerDashboard {...customerProps} />
-        </div>
+        <CustomerDashboard
+          customer={{
+            ...customerWithPromos,
+            nextRewardAt: config.spendGoal,
+          }}
+          progress={customerProgress}
+          onBack={handleBackToAccess}
+          onCheckin={handleCustomerCheckin}
+          branding={branding}
+          whatsappLink={whatsappLink}
+        />
       </div>
     );
   }
 
   return (
     <div style={styles.appShell}>
-      <div style={styles.backgroundGlowTop} />
-      <div style={styles.backgroundGlowBottom} />
-      <div style={styles.contentWrap}>
-        <AccessHubScreen
-          onCustomerEnter={handleEnterCustomer}
-          onEmployeeEnter={handleEnterAdmin}
-        />
-      </div>
+      <AccessHubScreen
+        onCustomerEnter={handleEnterCustomer}
+        onEmployeeEnter={handleEnterAdmin}
+        branding={branding}
+      />
     </div>
   );
 }
 
 const styles = {
   appShell: {
-    position: "relative",
     minHeight: "100vh",
     width: "100%",
-    overflow: "hidden",
     background:
-      "linear-gradient(180deg, #fcfaff 0%, #f6f1fb 48%, #efe7f7 100%)",
-    fontFamily:
-      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    color: "#22182f",
-  },
-  contentWrap: {
-    position: "relative",
-    zIndex: 2,
-    minHeight: "100vh",
-  },
-  backgroundGlowTop: {
-    position: "absolute",
-    top: -120,
-    left: -100,
-    width: 360,
-    height: 360,
-    borderRadius: "50%",
-    background: "radial-gradient(circle, rgba(122, 76, 180, 0.18) 0%, rgba(122, 76, 180, 0) 70%)",
-    pointerEvents: "none",
-    zIndex: 1,
-  },
-  backgroundGlowBottom: {
-    position: "absolute",
-    right: -140,
-    bottom: -160,
-    width: 420,
-    height: 420,
-    borderRadius: "50%",
-    background: "radial-gradient(circle, rgba(182, 139, 233, 0.16) 0%, rgba(182, 139, 233, 0) 72%)",
-    pointerEvents: "none",
-    zIndex: 1,
+      "radial-gradient(circle at top left, rgba(255,255,255,0.95) 0, rgba(255,255,255,0) 26%), radial-gradient(circle at bottom right, rgba(212,193,244,0.35) 0, rgba(212,193,244,0) 34%), linear-gradient(180deg, #f8f5ff 0%, #f1ebfb 52%, #ece3f8 100%)",
   },
 };

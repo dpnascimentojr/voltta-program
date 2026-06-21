@@ -2,17 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 
 const accent = "#6f3cc3";
 const accentDark = "#522b93";
-const accentSoft = "#f1e9ff";
-const border = "#e7dbf4";
-const borderSoft = "#f0e8f8";
-const ink = "#2a2038";
-const muted = "#76678a";
-const faint = "#9a8eb0";
-const bg = "#f7f4fb";
+const border = "#eadff7";
+const ink = "#2f2340";
+const muted = "#7b6d8d";
+const bg = "#f6f1fb";
 const white = "#ffffff";
-const success = "#257a4c";
-const danger = "#c54868";
-const warning = "#c9851a";
+const success = "#2f8f57";
+const danger = "#cf4d6f";
+const warning = "#d38b1f";
 
 const tabs = [
   { id: "overview", label: "Visão geral" },
@@ -108,6 +105,9 @@ export default function AdminPanel({
   const [activeTab, setActiveTab] = useState("overview");
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState({ type: "", text: "" });
+  const [isNarrow, setIsNarrow] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 1180 : false
+  );
 
   const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
   const [productForm, setProductForm] = useState(emptyProductForm);
@@ -135,6 +135,12 @@ export default function AdminPanel({
   });
 
   useEffect(() => {
+    const onResize = () => setIsNarrow(window.innerWidth < 1180);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
     setOrderForm((prev) => ({
       ...prev,
       customerId: prev.customerId || selectedCustomerId || customers[0]?.id || "",
@@ -153,7 +159,8 @@ export default function AdminPanel({
     const totalPoints = customers.reduce((sum, item) => sum + Number(item.points || 0), 0);
     const totalCoupons = customers.reduce(
       (sum, item) =>
-        sum + (Array.isArray(item.coupons) ? item.coupons.filter((coupon) => coupon.active).length : 0),
+        sum +
+        (Array.isArray(item.coupons) ? item.coupons.filter((coupon) => coupon.active).length : 0),
       0
     );
 
@@ -436,10 +443,20 @@ export default function AdminPanel({
       return;
     }
 
+    if (typeof onAddStaffUser !== "function") {
+      showError(new Error("Função de cadastro de funcionários não configurada no App."));
+      return;
+    }
+
     await runTask(
       "save-staff",
       async () => {
-        await onAddStaffUser(staffForm);
+        await onAddStaffUser({
+          name: staffForm.name.trim(),
+          login: staffForm.login.trim(),
+          role: staffForm.role,
+          password: staffForm.password.trim(),
+        });
         resetStaffForm();
       },
       "Usuário da equipe adicionado."
@@ -465,7 +482,14 @@ export default function AdminPanel({
           "Resumo da operação, atalhos e visão rápida dos principais números."
         )}
 
-        <div style={styles.statsGrid}>
+        <div
+          style={{
+            ...styles.statsGrid,
+            gridTemplateColumns: isNarrow
+              ? "repeat(auto-fit, minmax(180px, 1fr))"
+              : "repeat(auto-fit, minmax(210px, 1fr))",
+          }}
+        >
           <StatCard label="Clientes" value={stats.totalCustomers} helper="Base cadastrada" />
           <StatCard label="Produtos" value={stats.totalProducts} helper="Catálogo ativo" />
           <StatCard label="Promoções" value={stats.totalPromos} helper="Campanhas visíveis" />
@@ -476,7 +500,11 @@ export default function AdminPanel({
             helper="Soma dos pedidos"
           />
           <StatCard label="Pontos" value={stats.totalPoints} helper="Saldo distribuído" />
-          <StatCard label="Cupons ativos" value={stats.totalCoupons} helper="Clientes com benefício" />
+          <StatCard
+            label="Cupons ativos"
+            value={stats.totalCoupons}
+            helper="Clientes com benefício"
+          />
           <StatCard
             label="Check-ins pendentes"
             value={stats.pendingCheckins}
@@ -485,7 +513,7 @@ export default function AdminPanel({
           />
         </div>
 
-        <div style={styles.twoCols}>
+        <div style={getTwoColsStyle(isNarrow)}>
           <Card>
             <h3 style={styles.cardTitle}>Cliente em destaque</h3>
             {selectedCustomer ? (
@@ -493,7 +521,10 @@ export default function AdminPanel({
                 <InfoRow label="Nome" value={selectedCustomer.name} />
                 <InfoRow label="Telefone" value={selectedCustomer.phone || "-"} />
                 <InfoRow label="Pontos" value={selectedCustomer.points || 0} />
-                <InfoRow label="Gasto total" value={formatCurrency(selectedCustomer.totalSpent || 0)} />
+                <InfoRow
+                  label="Gasto total"
+                  value={formatCurrency(selectedCustomer.totalSpent || 0)}
+                />
                 <InfoRow label="Visitas" value={selectedCustomer.visits || 0} />
                 <InfoRow label="Nível" value={selectedCustomer.tier || "Bronze"} />
               </div>
@@ -524,13 +555,11 @@ export default function AdminPanel({
           "Cadastre, edite, selecione e acompanhe a base de clientes da loja."
         )}
 
-        <div style={styles.twoCols}>
+        <div style={getTwoColsStyle(isNarrow)}>
           <Card>
-            <h3 style={styles.cardTitle}>
-              {customerForm.id ? "Editar cliente" : "Novo cliente"}
-            </h3>
+            <h3 style={styles.cardTitle}>{customerForm.id ? "Editar cliente" : "Novo cliente"}</h3>
 
-            <form onSubmit={submitCustomer} style={styles.formGrid}>
+            <form onSubmit={submitCustomer} style={getFormGridStyle(isNarrow)}>
               <Field label="Nome completo">
                 <input
                   style={styles.input}
@@ -615,8 +644,8 @@ export default function AdminPanel({
 
           <Card>
             <h3 style={styles.cardTitle}>Aplicar bônus</h3>
-            <form onSubmit={submitBonus} style={styles.formSingleColumn}>
-              <Field label="Cliente">
+            <form onSubmit={submitBonus} style={getFormGridStyle(isNarrow)}>
+              <Field label="Cliente" full>
                 <select
                   style={styles.input}
                   value={bonusForm.customerId}
@@ -631,7 +660,7 @@ export default function AdminPanel({
                 </select>
               </Field>
 
-              <Field label="Pontos">
+              <Field label="Pontos" full>
                 <input
                   style={styles.input}
                   value={bonusForm.points}
@@ -672,9 +701,9 @@ export default function AdminPanel({
                 </thead>
                 <tbody>
                   {customers.map((customer) => {
-                    const isSelected = customer.id === selectedCustomerId;
+                    const isSelectedRow = customer.id === selectedCustomerId;
                     return (
-                      <tr key={customer.id} style={isSelected ? styles.selectedRow : undefined}>
+                      <tr key={customer.id} style={isSelectedRow ? styles.selectedRow : undefined}>
                         <td style={styles.td}>{customer.name}</td>
                         <td style={styles.td}>{customer.phone || "-"}</td>
                         <td style={styles.td}>{customer.points || 0}</td>
@@ -731,13 +760,11 @@ export default function AdminPanel({
           "Organize o catálogo da loja com preço, categoria e disponibilidade."
         )}
 
-        <div style={styles.twoCols}>
+        <div style={getTwoColsStyle(isNarrow)}>
           <Card>
-            <h3 style={styles.cardTitle}>
-              {productForm.id ? "Editar produto" : "Novo produto"}
-            </h3>
+            <h3 style={styles.cardTitle}>{productForm.id ? "Editar produto" : "Novo produto"}</h3>
 
-            <form onSubmit={submitProduct} style={styles.formGrid}>
+            <form onSubmit={submitProduct} style={getFormGridStyle(isNarrow)}>
               <Field label="Nome">
                 <input
                   style={styles.input}
@@ -770,7 +797,10 @@ export default function AdminPanel({
                   style={styles.input}
                   value={String(productForm.available)}
                   onChange={(e) =>
-                    setProductForm((prev) => ({ ...prev, available: e.target.value === "true" }))
+                    setProductForm((prev) => ({
+                      ...prev,
+                      available: e.target.value === "true",
+                    }))
                   }
                 >
                   <option value="true">Sim</option>
@@ -782,7 +812,9 @@ export default function AdminPanel({
                 <textarea
                   style={styles.textarea}
                   value={productForm.description}
-                  onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, description: e.target.value }))
+                  }
                   placeholder="Descreva rapidamente o produto"
                 />
               </Field>
@@ -807,13 +839,17 @@ export default function AdminPanel({
             <h3 style={styles.cardTitle}>Resumo do catálogo</h3>
             <div style={styles.infoList}>
               <InfoRow label="Produtos ativos" value={products.filter((item) => item.available).length} />
-              <InfoRow label="Produtos indisponíveis" value={products.filter((item) => !item.available).length} />
+              <InfoRow
+                label="Produtos indisponíveis"
+                value={products.filter((item) => !item.available).length}
+              />
               <InfoRow
                 label="Preço médio"
                 value={
                   products.length
                     ? formatCurrency(
-                        products.reduce((sum, item) => sum + Number(item.price || 0), 0) / products.length
+                        products.reduce((sum, item) => sum + Number(item.price || 0), 0) /
+                          products.length
                       )
                     : "R$ 0,00"
                 }
@@ -852,7 +888,7 @@ export default function AdminPanel({
                         <span
                           style={{
                             ...styles.statusBadge,
-                            background: product.available ? "#ecf8f1" : "#fff5ea",
+                            background: product.available ? "#ebf7ef" : "#fff3ea",
                             color: product.available ? success : warning,
                           }}
                         >
@@ -861,7 +897,11 @@ export default function AdminPanel({
                       </td>
                       <td style={styles.td}>
                         <div style={styles.inlineActions}>
-                          <button type="button" style={styles.ghostButton} onClick={() => handleEditProduct(product)}>
+                          <button
+                            type="button"
+                            style={styles.ghostButton}
+                            onClick={() => handleEditProduct(product)}
+                          >
                             Editar
                           </button>
                           <button
@@ -898,13 +938,11 @@ export default function AdminPanel({
           "Gerencie campanhas, textos promocionais e chamadas do cliente."
         )}
 
-        <div style={styles.twoCols}>
+        <div style={getTwoColsStyle(isNarrow)}>
           <Card>
-            <h3 style={styles.cardTitle}>
-              {promoForm.id ? "Editar promoção" : "Nova promoção"}
-            </h3>
+            <h3 style={styles.cardTitle}>{promoForm.id ? "Editar promoção" : "Nova promoção"}</h3>
 
-            <form onSubmit={submitPromo} style={styles.formGrid}>
+            <form onSubmit={submitPromo} style={getFormGridStyle(isNarrow)}>
               <Field label="Título">
                 <input
                   style={styles.input}
@@ -936,7 +974,9 @@ export default function AdminPanel({
                 <textarea
                   style={styles.textarea}
                   value={promoForm.description}
-                  onChange={(e) => setPromoForm((prev) => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setPromoForm((prev) => ({ ...prev, description: e.target.value }))
+                  }
                   placeholder="Explique a promoção de forma clara"
                 />
               </Field>
@@ -986,7 +1026,11 @@ export default function AdminPanel({
                     <h4 style={styles.promoTitle}>{promo.title}</h4>
                     <p style={styles.promoText}>{promo.description}</p>
                     <div style={styles.inlineActions}>
-                      <button type="button" style={styles.ghostButton} onClick={() => handleEditPromo(promo)}>
+                      <button
+                        type="button"
+                        style={styles.ghostButton}
+                        onClick={() => handleEditPromo(promo)}
+                      >
                         Editar
                       </button>
                       <button
@@ -1021,10 +1065,10 @@ export default function AdminPanel({
           "Registre vendas da loja e atualize automaticamente os pontos do cliente."
         )}
 
-        <div style={styles.twoCols}>
+        <div style={getTwoColsStyle(isNarrow)}>
           <Card>
             <h3 style={styles.cardTitle}>Novo pedido</h3>
-            <form onSubmit={submitOrder} style={styles.formGrid}>
+            <form onSubmit={submitOrder} style={getFormGridStyle(isNarrow)}>
               <Field label="Cliente" full>
                 <select
                   style={styles.input}
@@ -1122,7 +1166,8 @@ export default function AdminPanel({
                 value={
                   orders.length
                     ? formatCurrency(
-                        orders.reduce((sum, item) => sum + Number(item.total || 0), 0) / orders.length
+                        orders.reduce((sum, item) => sum + Number(item.total || 0), 0) /
+                          orders.length
                       )
                     : "R$ 0,00"
                 }
@@ -1195,13 +1240,22 @@ export default function AdminPanel({
           ) : (
             <div style={styles.checkinList}>
               {pendingCheckins.map((item) => (
-                <div key={item.id} style={styles.checkinCard}>
+                <div
+                  key={item.id}
+                  style={{
+                    ...styles.checkinCard,
+                    flexDirection: isNarrow ? "column" : "row",
+                    alignItems: isNarrow ? "flex-start" : "center",
+                  }}
+                >
                   <div>
                     <strong style={styles.checkinName}>
                       {item.customers?.full_name || "Cliente"}
                     </strong>
                     <p style={styles.checkinMeta}>Telefone: {item.customers?.phone || "-"}</p>
-                    <p style={styles.checkinMeta}>Solicitado em: {formatDate(item.requested_at, true)}</p>
+                    <p style={styles.checkinMeta}>
+                      Solicitado em: {formatDate(item.requested_at, true)}
+                    </p>
                     <p style={styles.checkinMeta}>
                       Instagram: {item.instagram_handle || branding.instagramUrl || "-"}
                     </p>
@@ -1215,7 +1269,7 @@ export default function AdminPanel({
                       onClick={() =>
                         runTask(
                           `approve-checkin-${item.id}`,
-                          async () => onApproveCheckin(item),
+                          async () => onApproveCheckin?.(item),
                           "Check-in aprovado com sucesso."
                         )
                       }
@@ -1230,7 +1284,7 @@ export default function AdminPanel({
                       onClick={() =>
                         runTask(
                           `reject-checkin-${item.id}`,
-                          async () => onRejectCheckin(item),
+                          async () => onRejectCheckin?.(item),
                           "Check-in recusado."
                         )
                       }
@@ -1258,7 +1312,7 @@ export default function AdminPanel({
         <Card>
           <h3 style={styles.cardTitle}>Parâmetros da loja e marca</h3>
 
-          <form onSubmit={submitSettings} style={styles.formGrid}>
+          <form onSubmit={submitSettings} style={getFormGridStyle(isNarrow)}>
             <Field label="Pontos por real">
               <input
                 style={styles.input}
@@ -1373,7 +1427,7 @@ export default function AdminPanel({
                   rel="noopener noreferrer"
                   style={styles.linkButton}
                 >
-                  Abrir WhatsApp
+                  Abrir WhatsApp da loja
                 </a>
               ) : null}
             </div>
@@ -1386,22 +1440,19 @@ export default function AdminPanel({
   function renderTeam() {
     return (
       <div style={styles.stack}>
-        {sectionTitle(
-          "Equipe",
-          "Cadastre acessos internos para uso da operação."
-        )}
+        {sectionTitle("Equipe", "Cadastre acessos internos para uso da operação.")}
 
-        <div style={styles.twoCols}>
+        <div style={getTwoColsStyle(isNarrow)}>
           <Card>
             <h3 style={styles.cardTitle}>Novo usuário da equipe</h3>
 
-            <form onSubmit={submitStaff} style={styles.formGrid}>
+            <form onSubmit={submitStaff} style={getFormGridStyle(isNarrow)}>
               <Field label="Nome">
                 <input
                   style={styles.input}
                   value={staffForm.name}
                   onChange={(e) => setStaffForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nome do colaborador"
+                  placeholder="Nome do funcionário"
                 />
               </Field>
 
@@ -1410,7 +1461,7 @@ export default function AdminPanel({
                   style={styles.input}
                   value={staffForm.login}
                   onChange={(e) => setStaffForm((prev) => ({ ...prev, login: e.target.value }))}
-                  placeholder="001"
+                  placeholder="usuario01"
                 />
               </Field>
 
@@ -1422,15 +1473,17 @@ export default function AdminPanel({
                 >
                   <option>Funcionário</option>
                   <option>Administrador</option>
+                  <option>Gerente</option>
                 </select>
               </Field>
 
               <Field label="Senha">
                 <input
+                  type="text"
                   style={styles.input}
                   value={staffForm.password}
                   onChange={(e) => setStaffForm((prev) => ({ ...prev, password: e.target.value }))}
-                  placeholder="Senha de acesso"
+                  placeholder="123456"
                 />
               </Field>
 
@@ -1438,31 +1491,60 @@ export default function AdminPanel({
                 <button type="submit" style={styles.primaryButton} disabled={busy === "save-staff"}>
                   {busy === "save-staff" ? "Salvando..." : "Adicionar usuário"}
                 </button>
+
+                <button type="button" style={styles.secondaryButton} onClick={resetStaffForm}>
+                  Limpar formulário
+                </button>
               </div>
             </form>
           </Card>
 
           <Card>
-            <h3 style={styles.cardTitle}>Acessos cadastrados</h3>
+            <div style={styles.listHeader}>
+              <h3 style={styles.cardTitle}>Acessos cadastrados</h3>
+              <span style={styles.miniBadge}>{staffUsers.length} usuários</span>
+            </div>
 
             {!staffUsers.length ? (
               <EmptyState text="Nenhum usuário da equipe cadastrado ainda." />
             ) : (
               <div style={styles.teamList}>
                 {staffUsers.map((user) => (
-                  <div key={user.id} style={styles.teamCard}>
-                    <div>
+                  <div
+                    key={user.id}
+                    style={{
+                      ...styles.teamCard,
+                      gridTemplateColumns: isNarrow ? "1fr" : "minmax(0, 1fr) auto",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
                       <strong style={styles.teamName}>{user.name}</strong>
                       <p style={styles.teamMeta}>Login: {user.login}</p>
                       <p style={styles.teamMeta}>Função: {user.role}</p>
                     </div>
-                    <button
-                      type="button"
-                      style={styles.dangerButton}
-                      onClick={() => onDeleteStaffUser(user.id)}
-                    >
-                      Excluir
-                    </button>
+
+                    <div style={styles.inlineActions}>
+                      <button
+                        type="button"
+                        style={styles.dangerButton}
+                        onClick={() => {
+                          if (typeof onDeleteStaffUser !== "function") {
+                            showError(
+                              new Error("Função de exclusão de funcionários não configurada no App.")
+                            );
+                            return;
+                          }
+
+                          runTask(
+                            `delete-staff-${user.id}`,
+                            async () => onDeleteStaffUser(user.id),
+                            "Usuário removido com sucesso."
+                          );
+                        }}
+                      >
+                        Excluir
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1473,47 +1555,38 @@ export default function AdminPanel({
     );
   }
 
-  function renderActiveTab() {
-    switch (activeTab) {
-      case "overview":
-        return renderOverview();
-      case "customers":
-        return renderCustomers();
-      case "products":
-        return renderProducts();
-      case "promos":
-        return renderPromos();
-      case "orders":
-        return renderOrders();
-      case "checkins":
-        return renderCheckins();
-      case "settings":
-        return renderSettings();
-      case "team":
-        return renderTeam();
-      default:
-        return renderOverview();
-    }
-  }
+  const content = {
+    overview: renderOverview,
+    customers: renderCustomers,
+    products: renderProducts,
+    promos: renderPromos,
+    orders: renderOrders,
+    checkins: renderCheckins,
+    settings: renderSettings,
+    team: renderTeam,
+  };
 
   return (
-    <div style={styles.page}>
-      <aside style={styles.sidebar}>
-        <div style={styles.brandBlock}>
-          <div style={styles.logoBubble}>
-            {branding.logoUrl ? (
-              <img src={branding.logoUrl} alt="Logo da loja" style={styles.logoImage} />
-            ) : (
-              <span style={styles.logoFallback}>V</span>
-            )}
-          </div>
-
-          <div style={styles.brandTextWrap}>
-            <p style={styles.eyebrow}>{branding.softwareName || "Voltta"}</p>
+    <div
+      style={{
+        ...styles.page,
+        gridTemplateColumns: isNarrow ? "1fr" : "250px minmax(0, 1fr)",
+      }}
+    >
+      <aside
+        style={{
+          ...styles.sidebar,
+          position: isNarrow ? "static" : "sticky",
+          top: isNarrow ? "auto" : 0,
+          height: isNarrow ? "auto" : "100vh",
+        }}
+      >
+        <div style={styles.sidebarBrand}>
+          <div style={styles.brandMark}>V</div>
+          <div>
+            <strong style={styles.brandEyebrow}>{branding.softwareName || "VOLTTA"}</strong>
             <h1 style={styles.brandTitle}>{branding.companyName || "Minha Loja"}</h1>
-            <p style={styles.brandSubtitle}>
-              {branding.welcomePhrase || "Painel da operação da loja"}
-            </p>
+            <p style={styles.brandSubtitle}>Painel da operação da loja</p>
           </div>
         </div>
 
@@ -1524,11 +1597,11 @@ export default function AdminPanel({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
                 style={{
                   ...styles.navButton,
                   ...(active ? styles.navButtonActive : {}),
                 }}
+                onClick={() => setActiveTab(tab.id)}
               >
                 {tab.label}
               </button>
@@ -1541,7 +1614,7 @@ export default function AdminPanel({
             Voltar
           </button>
           <button type="button" style={styles.primaryButtonWide} onClick={onLogout}>
-            Sair do painel
+            Sair
           </button>
         </div>
       </aside>
@@ -1551,16 +1624,14 @@ export default function AdminPanel({
           <div
             style={{
               ...styles.notice,
-              background: notice.type === "error" ? "#fff1f4" : "#edf8f1",
-              borderColor: notice.type === "error" ? "#f4cfda" : "#cfe8d7",
-              color: notice.type === "error" ? danger : success,
+              ...(notice.type === "error" ? styles.noticeError : styles.noticeSuccess),
             }}
           >
             {notice.text}
           </div>
         ) : null}
 
-        {renderActiveTab()}
+        {content[activeTab]?.()}
       </main>
     </div>
   );
@@ -1570,38 +1641,12 @@ function Card({ children }) {
   return <section style={styles.card}>{children}</section>;
 }
 
-function Field({ label, children, full = false }) {
+function Field({ label, full = false, children }) {
   return (
-    <label style={{ ...styles.field, ...(full ? styles.fieldFull : {}) }}>
+    <label style={full ? { ...styles.field, ...styles.fieldFull } : styles.field}>
       <span style={styles.label}>{label}</span>
       {children}
     </label>
-  );
-}
-
-function StatCard({ label, value, helper, highlight = false }) {
-  return (
-    <div
-      style={{
-        ...styles.statCard,
-        ...(highlight
-          ? {
-              background: "linear-gradient(180deg, #7c4ae0 0%, #6232c3 100%)",
-              color: white,
-              borderColor: "transparent",
-              boxShadow: "0 16px 32px rgba(111, 60, 195, 0.26)",
-            }
-          : {}),
-      }}
-    >
-      <p style={{ ...styles.statLabel, ...(highlight ? { color: "rgba(255,255,255,0.82)" } : {}) }}>
-        {label}
-      </p>
-      <strong style={styles.statValue}>{value}</strong>
-      <p style={{ ...styles.statHelper, ...(highlight ? { color: "rgba(255,255,255,0.76)" } : {}) }}>
-        {helper}
-      </p>
-    </div>
   );
 }
 
@@ -1609,13 +1654,28 @@ function InfoRow({ label, value }) {
   return (
     <div style={styles.infoRow}>
       <span style={styles.infoLabel}>{label}</span>
-      <strong style={styles.infoValue}>{String(value ?? "-")}</strong>
+      <strong style={styles.infoValue}>{value}</strong>
     </div>
   );
 }
 
 function EmptyState({ text }) {
   return <div style={styles.emptyState}>{text}</div>;
+}
+
+function StatCard({ label, value, helper, highlight = false }) {
+  return (
+    <div
+      style={{
+        ...styles.statCard,
+        ...(highlight ? styles.statCardHighlight : {}),
+      }}
+    >
+      <span style={styles.statLabel}>{label}</span>
+      <strong style={styles.statValue}>{value}</strong>
+      <small style={styles.statHelper}>{helper}</small>
+    </div>
+  );
 }
 
 function QuickActionButton({ label, onClick }) {
@@ -1636,90 +1696,87 @@ function formatCurrency(value) {
 function formatDate(value, withTime = false) {
   if (!value) return "-";
 
-  try {
-    return new Date(value).toLocaleString("pt-BR", {
-      dateStyle: "short",
-      ...(withTime ? { timeStyle: "short" } : {}),
-    });
-  } catch {
-    return "-";
-  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleString("pt-BR", {
+    dateStyle: "short",
+    ...(withTime ? { timeStyle: "short" } : {}),
+  });
+}
+
+function getTwoColsStyle(isNarrow) {
+  return {
+    ...styles.twoCols,
+    gridTemplateColumns: isNarrow ? "1fr" : "minmax(0, 1.15fr) minmax(320px, 0.85fr)",
+  };
+}
+
+function getFormGridStyle(isNarrow) {
+  return {
+    ...styles.formGrid,
+    gridTemplateColumns: isNarrow ? "1fr" : "repeat(2, minmax(0, 1fr))",
+  };
 }
 
 const styles = {
   page: {
     minHeight: "100vh",
     display: "grid",
-    gridTemplateColumns: "248px minmax(0, 1fr)",
-    background: "linear-gradient(180deg, #fcfbfe 0%, #f5f1fb 100%)",
+    background:
+      "radial-gradient(circle at top left, rgba(255,255,255,0.96) 0, rgba(255,255,255,0) 22%), linear-gradient(180deg, #fcfbfe 0%, #f5f1fb 100%)",
     color: ink,
     fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
   },
 
   sidebar: {
-    background: "linear-gradient(180deg, #311a4a 0%, #43245f 100%)",
+    background: "linear-gradient(180deg, #34154f 0%, #472368 100%)",
     color: white,
-    padding: "22px 16px 18px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 22,
+    padding: 20,
+    display: "grid",
+    gap: 20,
+    alignContent: "start",
     borderRight: "1px solid rgba(255,255,255,0.08)",
+    zIndex: 2,
   },
 
-  brandBlock: {
+  sidebarBrand: {
     display: "flex",
+    alignItems: "center",
     gap: 14,
-    alignItems: "flex-start",
   },
 
-  brandTextWrap: {
-    minWidth: 0,
-  },
-
-  logoBubble: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
-    background: "rgba(255,255,255,0.14)",
+  brandMark: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     display: "grid",
     placeItems: "center",
-    overflow: "hidden",
+    background: "rgba(255,255,255,0.14)",
+    color: white,
+    fontWeight: 900,
+    fontSize: 22,
     flexShrink: 0,
   },
 
-  logoImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-
-  logoFallback: {
-    fontSize: 22,
-    fontWeight: 900,
-    color: white,
-  },
-
-  eyebrow: {
-    margin: 0,
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 1.3,
-    color: "rgba(255,255,255,0.68)",
-    fontWeight: 700,
+  brandEyebrow: {
+    display: "block",
+    fontSize: 12,
+    opacity: 0.78,
+    letterSpacing: 1,
   },
 
   brandTitle: {
-    margin: "6px 0 6px",
-    fontSize: 19,
-    lineHeight: 1.08,
-    letterSpacing: "-0.03em",
+    margin: "4px 0 6px",
+    fontSize: 18,
+    lineHeight: 1.15,
   },
 
   brandSubtitle: {
     margin: 0,
+    fontSize: 14,
     color: "rgba(255,255,255,0.78)",
-    fontSize: 13,
-    lineHeight: 1.45,
+    lineHeight: 1.5,
   },
 
   nav: {
@@ -1728,51 +1785,59 @@ const styles = {
   },
 
   navButton: {
-    height: 48,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "transparent",
-    color: "rgba(255,255,255,0.88)",
-    borderRadius: 16,
-    padding: "0 16px",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 18,
+    padding: "14px 16px",
+    background: "rgba(255,255,255,0.04)",
+    color: white,
     textAlign: "left",
     fontWeight: 700,
-    fontSize: 15,
     cursor: "pointer",
-    transition: "0.2s ease",
   },
 
   navButtonActive: {
-    background: "rgba(255,255,255,0.14)",
-    borderColor: "rgba(255,255,255,0.18)",
-    color: white,
-    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.04)",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.1) 100%)",
+    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
   },
 
   sidebarFooter: {
-    marginTop: "auto",
     display: "grid",
     gap: 10,
+    marginTop: 8,
   },
 
   main: {
-    padding: 28,
+    padding: "24px clamp(16px, 2vw, 28px)",
     display: "grid",
     gap: 20,
     alignContent: "start",
     minWidth: 0,
+    overflowX: "hidden",
   },
 
   notice: {
-    border: "1px solid",
-    borderRadius: 14,
-    padding: "14px 16px",
+    borderRadius: 16,
+    padding: "14px 18px",
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 15,
+  },
+
+  noticeError: {
+    background: "#fff1f4",
+    border: "1px solid #f2cfd8",
+    color: "#b24361",
+  },
+
+  noticeSuccess: {
+    background: "#eefaf2",
+    border: "1px solid #cfe6d6",
+    color: success,
   },
 
   stack: {
     display: "grid",
     gap: 20,
+    minWidth: 0,
   },
 
   sectionHeading: {
@@ -1784,98 +1849,88 @@ const styles = {
 
   sectionTitle: {
     margin: 0,
-    fontSize: 26,
-    lineHeight: 1.06,
-    letterSpacing: "-0.04em",
+    fontSize: "clamp(28px, 3vw, 40px)",
+    lineHeight: 1.05,
     color: ink,
   },
 
   sectionSubtitle: {
     margin: "8px 0 0",
     color: muted,
-    fontSize: 15,
-    lineHeight: 1.55,
-    maxWidth: 760,
+    fontSize: 16,
+    lineHeight: 1.5,
   },
 
   statsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 16,
+    gap: 14,
   },
 
   statCard: {
     background: white,
     border: `1px solid ${border}`,
-    borderRadius: 22,
+    borderRadius: 20,
     padding: 18,
-    boxShadow: "0 10px 30px rgba(77, 41, 112, 0.08)",
+    display: "grid",
+    gap: 8,
+    minWidth: 0,
+    boxShadow: "0 14px 34px rgba(77, 41, 112, 0.06)",
+  },
+
+  statCardHighlight: {
+    background: "#f8f2ff",
   },
 
   statLabel: {
-    margin: 0,
     color: muted,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 700,
-    letterSpacing: "0.01em",
   },
 
   statValue: {
-    display: "block",
-    marginTop: 10,
+    color: ink,
     fontSize: 28,
-    lineHeight: 1.05,
-    letterSpacing: "-0.04em",
+    lineHeight: 1,
   },
 
   statHelper: {
-    margin: "8px 0 0",
     color: muted,
     fontSize: 13,
-    lineHeight: 1.45,
   },
 
   twoCols: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.88fr)",
     gap: 20,
     alignItems: "start",
+    minWidth: 0,
   },
 
   card: {
     background: white,
     border: `1px solid ${border}`,
-    borderRadius: 26,
-    padding: 26,
+    borderRadius: 24,
+    padding: 22,
     boxShadow: "0 14px 34px rgba(77, 41, 112, 0.07)",
     minWidth: 0,
+    overflow: "hidden",
   },
 
   cardTitle: {
-    margin: "0 0 20px",
-    fontSize: 18,
-    lineHeight: 1.2,
-    letterSpacing: "-0.02em",
+    margin: "0 0 16px",
+    fontSize: 20,
     color: ink,
   },
 
   formGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 18,
+    gap: 16,
     alignItems: "start",
-  },
-
-  formSingleColumn: {
-    display: "grid",
-    gridTemplateColumns: "1fr",
-    gap: 18,
-    alignItems: "start",
+    minWidth: 0,
   },
 
   field: {
     display: "grid",
-    gap: 9,
+    gap: 8,
     minWidth: 0,
   },
 
@@ -1887,95 +1942,86 @@ const styles = {
     fontSize: 13,
     color: muted,
     fontWeight: 700,
-    lineHeight: 1.2,
   },
 
   input: {
     width: "100%",
     minWidth: 0,
-    height: 50,
+    height: 48,
     border: `1px solid ${border}`,
-    borderRadius: 16,
-    padding: "0 15px",
-    background: white,
+    borderRadius: 14,
+    padding: "0 14px",
+    background: "#fcfbfe",
     color: ink,
     outline: "none",
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 1.2,
-    boxShadow: "none",
+    boxSizing: "border-box",
   },
 
   textarea: {
     width: "100%",
     minWidth: 0,
-    minHeight: 116,
+    minHeight: 110,
     resize: "vertical",
     border: `1px solid ${border}`,
-    borderRadius: 16,
-    padding: "14px 15px",
-    background: white,
+    borderRadius: 14,
+    padding: "12px 14px",
+    background: "#fcfbfe",
     color: ink,
     outline: "none",
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 1.5,
     fontFamily: "inherit",
+    boxSizing: "border-box",
   },
 
   actionsRowFull: {
     gridColumn: "1 / -1",
     display: "flex",
-    gap: 12,
+    gap: 10,
     flexWrap: "wrap",
     marginTop: 4,
   },
 
   primaryButton: {
     border: 0,
-    borderRadius: 16,
-    height: 48,
-    padding: "0 20px",
-    background: "linear-gradient(180deg, #7b48df 0%, #622fc4 100%)",
+    borderRadius: 14,
+    padding: "12px 18px",
+    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
     color: white,
     fontWeight: 800,
-    fontSize: 15,
     cursor: "pointer",
-    boxShadow: "0 10px 22px rgba(111, 60, 195, 0.22)",
   },
 
   primaryButtonWide: {
     border: 0,
-    borderRadius: 16,
-    height: 48,
-    padding: "0 18px",
-    background: "linear-gradient(180deg, #7b48df 0%, #622fc4 100%)",
+    borderRadius: 14,
+    padding: "12px 18px",
+    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
     color: white,
     fontWeight: 800,
-    fontSize: 15,
     cursor: "pointer",
     width: "100%",
   },
 
   secondaryButton: {
     border: `1px solid ${border}`,
-    borderRadius: 16,
-    height: 48,
-    padding: "0 18px",
+    borderRadius: 14,
+    padding: "12px 18px",
     background: "#faf7fe",
     color: ink,
     fontWeight: 700,
-    fontSize: 15,
     cursor: "pointer",
   },
 
   secondaryButtonWide: {
     border: "1px solid rgba(255,255,255,0.16)",
-    borderRadius: 16,
-    height: 48,
-    padding: "0 18px",
+    borderRadius: 14,
+    padding: "12px 18px",
     background: "rgba(255,255,255,0.06)",
     color: white,
     fontWeight: 700,
-    fontSize: 15,
     cursor: "pointer",
     width: "100%",
   },
@@ -1983,22 +2029,20 @@ const styles = {
   ghostButton: {
     border: `1px solid ${border}`,
     borderRadius: 12,
-    padding: "10px 12px",
+    padding: "9px 12px",
     background: white,
     color: ink,
     fontWeight: 700,
-    fontSize: 14,
     cursor: "pointer",
   },
 
   dangerButton: {
     border: 0,
     borderRadius: 12,
-    padding: "10px 12px",
+    padding: "9px 12px",
     background: "#fff1f4",
     color: danger,
     fontWeight: 800,
-    fontSize: 14,
     cursor: "pointer",
   },
 
@@ -2006,14 +2050,12 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 16,
-    height: 48,
-    padding: "0 18px",
-    background: "#edf5ff",
-    color: "#245ea7",
+    borderRadius: 14,
+    padding: "12px 18px",
+    background: "#edf6ff",
+    color: "#2461b1",
     fontWeight: 800,
     textDecoration: "none",
-    fontSize: 14,
   },
 
   listHeader: {
@@ -2022,6 +2064,7 @@ const styles = {
     alignItems: "center",
     gap: 12,
     marginBottom: 8,
+    flexWrap: "wrap",
   },
 
   miniBadge: {
@@ -2030,11 +2073,10 @@ const styles = {
     justifyContent: "center",
     borderRadius: 999,
     padding: "8px 12px",
-    background: accentSoft,
+    background: "#f3ecfb",
     color: accentDark,
     fontSize: 12,
     fontWeight: 800,
-    whiteSpace: "nowrap",
   },
 
   tableWrap: {
@@ -2052,8 +2094,8 @@ const styles = {
     textAlign: "left",
     fontSize: 12,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-    color: faint,
+    letterSpacing: 0.6,
+    color: muted,
     padding: "14px 12px",
     borderBottom: `1px solid ${border}`,
     whiteSpace: "nowrap",
@@ -2061,14 +2103,14 @@ const styles = {
 
   td: {
     padding: "14px 12px",
-    borderBottom: `1px solid ${borderSoft}`,
+    borderBottom: "1px solid #f1ebf8",
     verticalAlign: "top",
     fontSize: 14,
     color: ink,
   },
 
   selectedRow: {
-    background: "#fbf8ff",
+    background: "#faf7fe",
   },
 
   inlineActions: {
@@ -2085,10 +2127,10 @@ const styles = {
   infoRow: {
     display: "flex",
     justifyContent: "space-between",
-    gap: 14,
+    gap: 12,
     alignItems: "center",
-    borderBottom: `1px solid ${borderSoft}`,
-    paddingBottom: 11,
+    borderBottom: "1px solid #f1ebf8",
+    paddingBottom: 10,
   },
 
   infoLabel: {
@@ -2105,27 +2147,24 @@ const styles = {
   emptyState: {
     border: `1px dashed ${border}`,
     borderRadius: 18,
-    padding: 24,
+    padding: 22,
     textAlign: "center",
     color: muted,
     background: "#fcfbfe",
-    fontSize: 14,
   },
 
   quickActions: {
     display: "grid",
-    gap: 12,
+    gap: 10,
   },
 
   quickButton: {
     border: `1px solid ${border}`,
     borderRadius: 16,
-    height: 50,
-    padding: "0 16px",
+    padding: "14px 16px",
     background: "#faf7fe",
     color: ink,
     fontWeight: 800,
-    fontSize: 14,
     textAlign: "left",
     cursor: "pointer",
   },
@@ -2133,7 +2172,7 @@ const styles = {
   promoGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-    gap: 16,
+    gap: 14,
   },
 
   promoCard: {
@@ -2160,7 +2199,7 @@ const styles = {
     alignItems: "center",
     borderRadius: 999,
     padding: "7px 10px",
-    background: accentSoft,
+    background: "#efe7fb",
     color: accentDark,
     fontSize: 12,
     fontWeight: 800,
@@ -2168,9 +2207,8 @@ const styles = {
 
   promoTitle: {
     margin: 0,
-    fontSize: 17,
+    fontSize: 18,
     color: ink,
-    letterSpacing: "-0.02em",
   },
 
   promoText: {
@@ -2197,7 +2235,6 @@ const styles = {
   checkinCard: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
     gap: 16,
     border: `1px solid ${border}`,
     borderRadius: 18,
@@ -2226,10 +2263,10 @@ const styles = {
     borderRadius: 18,
     background: "#fcfbfe",
     padding: 16,
-    display: "flex",
-    justifyContent: "space-between",
+    display: "grid",
     alignItems: "center",
     gap: 12,
+    minWidth: 0,
   },
 
   teamName: {
@@ -2241,5 +2278,6 @@ const styles = {
     margin: "5px 0 0",
     color: muted,
     fontSize: 14,
+    wordBreak: "break-word",
   },
 };
