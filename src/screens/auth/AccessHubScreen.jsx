@@ -117,7 +117,7 @@ export default function AccessHubScreen({
                 value={phone}
                 onChange={(e) => setPhone(formatPhone(e.target.value))}
                 inputMode="numeric"
-                placeholder="(11) 97495-1420"
+                placeholder="(00) 12345-6789"
               />
             </label>
 
