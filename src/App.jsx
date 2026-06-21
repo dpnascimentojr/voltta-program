@@ -1,7 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "./context/AuthContext";
 import AdminPanel from "./screens/admin/AdminPanel";
 import AccessHubScreen from "./screens/auth/AccessHubScreen";
 import CustomerDashboard from "./screens/customer/CustomerDashboard";
+
+export default function App() {
+  const { loading, authenticated, isEmployee, isCustomer, profile, logout } = useAuth();
+
+  if (loading) {
+    return <div style={{ padding: 24 }}>Carregando...</div>;
+  }
+
+  if (!authenticated) {
+    return <AccessHubScreen />;
+  }
+
+  if (isEmployee) {
+    return <AdminPanel currentUser={profile} onExit={logout} />;
+  }
+
+  if (isCustomer) {
+    return <CustomerDashboard customer={profile} onLogout={logout} />;
+  }
+
+  return <AccessHubScreen />;
+}
 
 const STORAGE_KEYS = {
   config: "savana_config",
