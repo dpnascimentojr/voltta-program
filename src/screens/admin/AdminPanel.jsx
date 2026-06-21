@@ -1,15 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const accent = "#6f3cc3";
 const accentDark = "#522b93";
-const border = "#eadff7";
-const ink = "#2f2340";
-const muted = "#7b6d8d";
-const bg = "#f6f1fb";
+const accentSoft = "#f1e9ff";
+const border = "#e7dbf4";
+const borderSoft = "#f0e8f8";
+const ink = "#2a2038";
+const muted = "#76678a";
+const faint = "#9a8eb0";
+const bg = "#f7f4fb";
 const white = "#ffffff";
-const success = "#2f8f57";
-const danger = "#cf4d6f";
-const warning = "#d38b1f";
+const success = "#257a4c";
+const danger = "#c54868";
+const warning = "#c9851a";
 
 const tabs = [
   { id: "overview", label: "Visão geral" },
@@ -131,6 +134,17 @@ export default function AdminPanel({
     welcomePhrase: branding.welcomePhrase || "Seu clube de pontos da loja.",
   });
 
+  useEffect(() => {
+    setOrderForm((prev) => ({
+      ...prev,
+      customerId: prev.customerId || selectedCustomerId || customers[0]?.id || "",
+    }));
+    setBonusForm((prev) => ({
+      ...prev,
+      customerId: prev.customerId || selectedCustomerId || customers[0]?.id || "",
+    }));
+  }, [selectedCustomerId, customers]);
+
   const selectedCustomer =
     customers.find((customer) => customer.id === selectedCustomerId) || customers[0] || null;
 
@@ -138,7 +152,8 @@ export default function AdminPanel({
     const totalRevenue = orders.reduce((sum, item) => sum + Number(item.total || 0), 0);
     const totalPoints = customers.reduce((sum, item) => sum + Number(item.points || 0), 0);
     const totalCoupons = customers.reduce(
-      (sum, item) => sum + (Array.isArray(item.coupons) ? item.coupons.filter((coupon) => coupon.active).length : 0),
+      (sum, item) =>
+        sum + (Array.isArray(item.coupons) ? item.coupons.filter((coupon) => coupon.active).length : 0),
       0
     );
 
@@ -260,17 +275,25 @@ export default function AdminPanel({
     };
 
     if (customerForm.id) {
-      await runTask("save-customer", async () => {
-        await onUpdateCustomer(payload);
-        resetCustomerForm();
-      }, "Cliente atualizado com sucesso.");
+      await runTask(
+        "save-customer",
+        async () => {
+          await onUpdateCustomer(payload);
+          resetCustomerForm();
+        },
+        "Cliente atualizado com sucesso."
+      );
       return;
     }
 
-    await runTask("save-customer", async () => {
-      await onAddCustomer(payload);
-      resetCustomerForm();
-    }, "Cliente cadastrado com sucesso.");
+    await runTask(
+      "save-customer",
+      async () => {
+        await onAddCustomer(payload);
+        resetCustomerForm();
+      },
+      "Cliente cadastrado com sucesso."
+    );
   }
 
   async function submitProduct(event) {
@@ -287,17 +310,25 @@ export default function AdminPanel({
     };
 
     if (productForm.id) {
-      await runTask("save-product", async () => {
-        await onUpdateProduct(payload);
-        resetProductForm();
-      }, "Produto atualizado com sucesso.");
+      await runTask(
+        "save-product",
+        async () => {
+          await onUpdateProduct(payload);
+          resetProductForm();
+        },
+        "Produto atualizado com sucesso."
+      );
       return;
     }
 
-    await runTask("save-product", async () => {
-      await onAddProduct(payload);
-      resetProductForm();
-    }, "Produto cadastrado com sucesso.");
+    await runTask(
+      "save-product",
+      async () => {
+        await onAddProduct(payload);
+        resetProductForm();
+      },
+      "Produto cadastrado com sucesso."
+    );
   }
 
   async function submitPromo(event) {
@@ -311,17 +342,25 @@ export default function AdminPanel({
     const payload = { ...promoForm };
 
     if (promoForm.id) {
-      await runTask("save-promo", async () => {
-        await onUpdatePromo(payload);
-        resetPromoForm();
-      }, "Promoção atualizada com sucesso.");
+      await runTask(
+        "save-promo",
+        async () => {
+          await onUpdatePromo(payload);
+          resetPromoForm();
+        },
+        "Promoção atualizada com sucesso."
+      );
       return;
     }
 
-    await runTask("save-promo", async () => {
-      await onAddPromo(payload);
-      resetPromoForm();
-    }, "Promoção cadastrada com sucesso.");
+    await runTask(
+      "save-promo",
+      async () => {
+        await onAddPromo(payload);
+        resetPromoForm();
+      },
+      "Promoção cadastrada com sucesso."
+    );
   }
 
   async function submitOrder(event) {
@@ -332,13 +371,17 @@ export default function AdminPanel({
       return;
     }
 
-    await runTask("save-order", async () => {
-      await onAddOrder({
-        ...orderForm,
-        total: Number(orderForm.total || 0),
-      });
-      resetOrderForm();
-    }, "Pedido registrado com sucesso.");
+    await runTask(
+      "save-order",
+      async () => {
+        await onAddOrder({
+          ...orderForm,
+          total: Number(orderForm.total || 0),
+        });
+        resetOrderForm();
+      },
+      "Pedido registrado com sucesso."
+    );
   }
 
   async function submitBonus(event) {
@@ -349,32 +392,40 @@ export default function AdminPanel({
       return;
     }
 
-    await runTask("save-bonus", async () => {
-      await onAddBonus({
-        customerId: bonusForm.customerId,
-        points: Number(bonusForm.points || 0),
-      });
-      resetBonusForm();
-    }, "Bônus aplicado com sucesso.");
+    await runTask(
+      "save-bonus",
+      async () => {
+        await onAddBonus({
+          customerId: bonusForm.customerId,
+          points: Number(bonusForm.points || 0),
+        });
+        resetBonusForm();
+      },
+      "Bônus aplicado com sucesso."
+    );
   }
 
   async function submitSettings(event) {
     event.preventDefault();
 
-    await runTask("save-settings", async () => {
-      await onSaveConfig({
-        pointsPerReal: Number(settingsForm.pointsPerReal || 10),
-        spendGoal: Number(settingsForm.spendGoal || 250),
-        checkinPercent: Number(settingsForm.checkinPercent || 10),
-        softwareName: settingsForm.softwareName,
-        companyName: settingsForm.companyName,
-        logoUrl: settingsForm.logoUrl,
-        instagramUrl: settingsForm.instagramUrl,
-        whatsappNumber: settingsForm.whatsappNumber,
-        whatsappMessage: settingsForm.whatsappMessage,
-        welcomePhrase: settingsForm.welcomePhrase,
-      });
-    }, "Configurações salvas com sucesso.");
+    await runTask(
+      "save-settings",
+      async () => {
+        await onSaveConfig({
+          pointsPerReal: Number(settingsForm.pointsPerReal || 10),
+          spendGoal: Number(settingsForm.spendGoal || 250),
+          checkinPercent: Number(settingsForm.checkinPercent || 10),
+          softwareName: settingsForm.softwareName,
+          companyName: settingsForm.companyName,
+          logoUrl: settingsForm.logoUrl,
+          instagramUrl: settingsForm.instagramUrl,
+          whatsappNumber: settingsForm.whatsappNumber,
+          whatsappMessage: settingsForm.whatsappMessage,
+          welcomePhrase: settingsForm.welcomePhrase,
+        });
+      },
+      "Configurações salvas com sucesso."
+    );
   }
 
   async function submitStaff(event) {
@@ -385,10 +436,14 @@ export default function AdminPanel({
       return;
     }
 
-    await runTask("save-staff", async () => {
-      await onAddStaffUser(staffForm);
-      resetStaffForm();
-    }, "Usuário da equipe adicionado.");
+    await runTask(
+      "save-staff",
+      async () => {
+        await onAddStaffUser(staffForm);
+        resetStaffForm();
+      },
+      "Usuário da equipe adicionado."
+    );
   }
 
   function sectionTitle(title, subtitle) {
@@ -420,16 +475,8 @@ export default function AdminPanel({
             value={formatCurrency(stats.totalRevenue)}
             helper="Soma dos pedidos"
           />
-          <StatCard
-            label="Pontos"
-            value={stats.totalPoints}
-            helper="Saldo distribuído"
-          />
-          <StatCard
-            label="Cupons ativos"
-            value={stats.totalCoupons}
-            helper="Clientes com benefício"
-          />
+          <StatCard label="Pontos" value={stats.totalPoints} helper="Saldo distribuído" />
+          <StatCard label="Cupons ativos" value={stats.totalCoupons} helper="Clientes com benefício" />
           <StatCard
             label="Check-ins pendentes"
             value={stats.pendingCheckins}
@@ -568,8 +615,8 @@ export default function AdminPanel({
 
           <Card>
             <h3 style={styles.cardTitle}>Aplicar bônus</h3>
-            <form onSubmit={submitBonus} style={styles.formGrid}>
-              <Field label="Cliente" full>
+            <form onSubmit={submitBonus} style={styles.formSingleColumn}>
+              <Field label="Cliente">
                 <select
                   style={styles.input}
                   value={bonusForm.customerId}
@@ -584,7 +631,7 @@ export default function AdminPanel({
                 </select>
               </Field>
 
-              <Field label="Pontos" full>
+              <Field label="Pontos">
                 <input
                   style={styles.input}
                   value={bonusForm.points}
@@ -805,7 +852,7 @@ export default function AdminPanel({
                         <span
                           style={{
                             ...styles.statusBadge,
-                            background: product.available ? "#ebf7ef" : "#fff3ea",
+                            background: product.available ? "#ecf8f1" : "#fff5ea",
                             color: product.available ? success : warning,
                           }}
                         >
@@ -1155,7 +1202,9 @@ export default function AdminPanel({
                     </strong>
                     <p style={styles.checkinMeta}>Telefone: {item.customers?.phone || "-"}</p>
                     <p style={styles.checkinMeta}>Solicitado em: {formatDate(item.requested_at, true)}</p>
-                    <p style={styles.checkinMeta}>Instagram: {item.instagram_handle || branding.instagramUrl || "-"}</p>
+                    <p style={styles.checkinMeta}>
+                      Instagram: {item.instagram_handle || branding.instagramUrl || "-"}
+                    </p>
                   </div>
 
                   <div style={styles.inlineActions}>
@@ -1459,7 +1508,7 @@ export default function AdminPanel({
             )}
           </div>
 
-          <div>
+          <div style={styles.brandTextWrap}>
             <p style={styles.eyebrow}>{branding.softwareName || "Voltta"}</p>
             <h1 style={styles.brandTitle}>{branding.companyName || "Minha Loja"}</h1>
             <p style={styles.brandSubtitle}>
@@ -1502,8 +1551,8 @@ export default function AdminPanel({
           <div
             style={{
               ...styles.notice,
-              background: notice.type === "error" ? "#fff0f4" : "#edf8f1",
-              borderColor: notice.type === "error" ? "#f2cada" : "#cfe9d8",
+              background: notice.type === "error" ? "#fff1f4" : "#edf8f1",
+              borderColor: notice.type === "error" ? "#f4cfda" : "#cfe8d7",
               color: notice.type === "error" ? danger : success,
             }}
           >
@@ -1537,9 +1586,10 @@ function StatCard({ label, value, helper, highlight = false }) {
         ...styles.statCard,
         ...(highlight
           ? {
-              background: "linear-gradient(135deg, #6f3cc3 0%, #8d67d6 100%)",
+              background: "linear-gradient(180deg, #7c4ae0 0%, #6232c3 100%)",
               color: white,
               borderColor: "transparent",
+              boxShadow: "0 16px 32px rgba(111, 60, 195, 0.26)",
             }
           : {}),
       }}
@@ -1600,18 +1650,19 @@ const styles = {
   page: {
     minHeight: "100vh",
     display: "grid",
-    gridTemplateColumns: "290px 1fr",
-    background: bg,
+    gridTemplateColumns: "248px minmax(0, 1fr)",
+    background: "linear-gradient(180deg, #fcfbfe 0%, #f5f1fb 100%)",
     color: ink,
+    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
   },
 
   sidebar: {
-    background: "linear-gradient(180deg, #2f1c46 0%, #3e255d 100%)",
+    background: "linear-gradient(180deg, #311a4a 0%, #43245f 100%)",
     color: white,
-    padding: 24,
+    padding: "22px 16px 18px",
     display: "flex",
     flexDirection: "column",
-    gap: 24,
+    gap: 22,
     borderRight: "1px solid rgba(255,255,255,0.08)",
   },
 
@@ -1621,9 +1672,13 @@ const styles = {
     alignItems: "flex-start",
   },
 
+  brandTextWrap: {
+    minWidth: 0,
+  },
+
   logoBubble: {
-    width: 56,
-    height: 56,
+    width: 58,
+    height: 58,
     borderRadius: 18,
     background: "rgba(255,255,255,0.14)",
     display: "grid",
@@ -1646,38 +1701,42 @@ const styles = {
 
   eyebrow: {
     margin: 0,
-    fontSize: 12,
+    fontSize: 11,
     textTransform: "uppercase",
-    letterSpacing: 1.4,
+    letterSpacing: 1.3,
     color: "rgba(255,255,255,0.68)",
+    fontWeight: 700,
   },
 
   brandTitle: {
-    margin: "4px 0 6px",
-    fontSize: 22,
-    lineHeight: 1.1,
+    margin: "6px 0 6px",
+    fontSize: 19,
+    lineHeight: 1.08,
+    letterSpacing: "-0.03em",
   },
 
   brandSubtitle: {
     margin: 0,
     color: "rgba(255,255,255,0.78)",
     fontSize: 13,
-    lineHeight: 1.5,
+    lineHeight: 1.45,
   },
 
   nav: {
     display: "grid",
-    gap: 8,
+    gap: 10,
   },
 
   navButton: {
-    border: "1px solid rgba(255,255,255,0.08)",
+    height: 48,
+    border: "1px solid rgba(255,255,255,0.1)",
     background: "transparent",
-    color: "rgba(255,255,255,0.86)",
+    color: "rgba(255,255,255,0.88)",
     borderRadius: 16,
-    padding: "14px 16px",
+    padding: "0 16px",
     textAlign: "left",
     fontWeight: 700,
+    fontSize: 15,
     cursor: "pointer",
     transition: "0.2s ease",
   },
@@ -1686,6 +1745,7 @@ const styles = {
     background: "rgba(255,255,255,0.14)",
     borderColor: "rgba(255,255,255,0.18)",
     color: white,
+    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.04)",
   },
 
   sidebarFooter: {
@@ -1697,45 +1757,51 @@ const styles = {
   main: {
     padding: 28,
     display: "grid",
-    gap: 18,
+    gap: 20,
     alignContent: "start",
+    minWidth: 0,
   },
 
   notice: {
     border: "1px solid",
-    borderRadius: 16,
+    borderRadius: 14,
     padding: "14px 16px",
     fontWeight: 700,
+    fontSize: 14,
   },
 
   stack: {
     display: "grid",
-    gap: 18,
+    gap: 20,
   },
 
   sectionHeading: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
   },
 
   sectionTitle: {
     margin: 0,
-    fontSize: 28,
+    fontSize: 26,
+    lineHeight: 1.06,
+    letterSpacing: "-0.04em",
     color: ink,
   },
 
   sectionSubtitle: {
-    margin: "6px 0 0",
+    margin: "8px 0 0",
     color: muted,
     fontSize: 15,
+    lineHeight: 1.55,
+    maxWidth: 760,
   },
 
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 14,
+    gap: 16,
   },
 
   statCard: {
@@ -1743,58 +1809,74 @@ const styles = {
     border: `1px solid ${border}`,
     borderRadius: 22,
     padding: 18,
-    boxShadow: "0 18px 42px rgba(90, 54, 119, 0.08)",
+    boxShadow: "0 10px 30px rgba(77, 41, 112, 0.08)",
   },
 
   statLabel: {
     margin: 0,
     color: muted,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 700,
+    letterSpacing: "0.01em",
   },
 
   statValue: {
     display: "block",
     marginTop: 10,
     fontSize: 28,
-    lineHeight: 1.1,
+    lineHeight: 1.05,
+    letterSpacing: "-0.04em",
   },
 
   statHelper: {
     margin: "8px 0 0",
     color: muted,
     fontSize: 13,
+    lineHeight: 1.45,
   },
 
   twoCols: {
     display: "grid",
-    gridTemplateColumns: "1.1fr 0.9fr",
-    gap: 18,
+    gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.88fr)",
+    gap: 20,
+    alignItems: "start",
   },
 
   card: {
     background: white,
     border: `1px solid ${border}`,
-    borderRadius: 24,
-    padding: 22,
-    boxShadow: "0 18px 42px rgba(90, 54, 119, 0.08)",
+    borderRadius: 26,
+    padding: 26,
+    boxShadow: "0 14px 34px rgba(77, 41, 112, 0.07)",
+    minWidth: 0,
   },
 
   cardTitle: {
-    margin: "0 0 16px",
-    fontSize: 20,
+    margin: "0 0 20px",
+    fontSize: 18,
+    lineHeight: 1.2,
+    letterSpacing: "-0.02em",
     color: ink,
   },
 
   formGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 14,
+    gap: 18,
+    alignItems: "start",
+  },
+
+  formSingleColumn: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: 18,
+    alignItems: "start",
   },
 
   field: {
     display: "grid",
-    gap: 8,
+    gap: 9,
+    minWidth: 0,
   },
 
   fieldFull: {
@@ -1805,79 +1887,95 @@ const styles = {
     fontSize: 13,
     color: muted,
     fontWeight: 700,
+    lineHeight: 1.2,
   },
 
   input: {
     width: "100%",
+    minWidth: 0,
+    height: 50,
     border: `1px solid ${border}`,
-    borderRadius: 14,
-    padding: "12px 14px",
-    background: "#fcfbfe",
+    borderRadius: 16,
+    padding: "0 15px",
+    background: white,
     color: ink,
     outline: "none",
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 1.2,
+    boxShadow: "none",
   },
 
   textarea: {
     width: "100%",
-    minHeight: 96,
+    minWidth: 0,
+    minHeight: 116,
     resize: "vertical",
     border: `1px solid ${border}`,
-    borderRadius: 14,
-    padding: "12px 14px",
-    background: "#fcfbfe",
+    borderRadius: 16,
+    padding: "14px 15px",
+    background: white,
     color: ink,
     outline: "none",
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 1.5,
     fontFamily: "inherit",
   },
 
   actionsRowFull: {
     gridColumn: "1 / -1",
     display: "flex",
-    gap: 10,
+    gap: 12,
     flexWrap: "wrap",
     marginTop: 4,
   },
 
   primaryButton: {
     border: 0,
-    borderRadius: 14,
-    padding: "12px 18px",
-    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
+    borderRadius: 16,
+    height: 48,
+    padding: "0 20px",
+    background: "linear-gradient(180deg, #7b48df 0%, #622fc4 100%)",
     color: white,
     fontWeight: 800,
+    fontSize: 15,
     cursor: "pointer",
+    boxShadow: "0 10px 22px rgba(111, 60, 195, 0.22)",
   },
 
   primaryButtonWide: {
     border: 0,
-    borderRadius: 14,
-    padding: "12px 18px",
-    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
+    borderRadius: 16,
+    height: 48,
+    padding: "0 18px",
+    background: "linear-gradient(180deg, #7b48df 0%, #622fc4 100%)",
     color: white,
     fontWeight: 800,
+    fontSize: 15,
     cursor: "pointer",
     width: "100%",
   },
 
   secondaryButton: {
     border: `1px solid ${border}`,
-    borderRadius: 14,
-    padding: "12px 18px",
+    borderRadius: 16,
+    height: 48,
+    padding: "0 18px",
     background: "#faf7fe",
     color: ink,
     fontWeight: 700,
+    fontSize: 15,
     cursor: "pointer",
   },
 
   secondaryButtonWide: {
     border: "1px solid rgba(255,255,255,0.16)",
-    borderRadius: 14,
-    padding: "12px 18px",
+    borderRadius: 16,
+    height: 48,
+    padding: "0 18px",
     background: "rgba(255,255,255,0.06)",
     color: white,
     fontWeight: 700,
+    fontSize: 15,
     cursor: "pointer",
     width: "100%",
   },
@@ -1885,20 +1983,22 @@ const styles = {
   ghostButton: {
     border: `1px solid ${border}`,
     borderRadius: 12,
-    padding: "9px 12px",
+    padding: "10px 12px",
     background: white,
     color: ink,
     fontWeight: 700,
+    fontSize: 14,
     cursor: "pointer",
   },
 
   dangerButton: {
     border: 0,
     borderRadius: 12,
-    padding: "9px 12px",
+    padding: "10px 12px",
     background: "#fff1f4",
     color: danger,
     fontWeight: 800,
+    fontSize: 14,
     cursor: "pointer",
   },
 
@@ -1906,12 +2006,14 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
-    padding: "12px 18px",
-    background: "#edf6ff",
-    color: "#2461b1",
+    borderRadius: 16,
+    height: 48,
+    padding: "0 18px",
+    background: "#edf5ff",
+    color: "#245ea7",
     fontWeight: 800,
     textDecoration: "none",
+    fontSize: 14,
   },
 
   listHeader: {
@@ -1928,41 +2030,45 @@ const styles = {
     justifyContent: "center",
     borderRadius: 999,
     padding: "8px 12px",
-    background: "#f3ecfb",
+    background: accentSoft,
     color: accentDark,
     fontSize: 12,
     fontWeight: 800,
+    whiteSpace: "nowrap",
   },
 
   tableWrap: {
     overflowX: "auto",
+    minWidth: 0,
   },
 
   table: {
     width: "100%",
     borderCollapse: "collapse",
+    minWidth: 720,
   },
 
   th: {
     textAlign: "left",
     fontSize: 12,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
-    color: muted,
+    letterSpacing: 0.5,
+    color: faint,
     padding: "14px 12px",
     borderBottom: `1px solid ${border}`,
+    whiteSpace: "nowrap",
   },
 
   td: {
     padding: "14px 12px",
-    borderBottom: "1px solid #f1ebf8",
+    borderBottom: `1px solid ${borderSoft}`,
     verticalAlign: "top",
     fontSize: 14,
     color: ink,
   },
 
   selectedRow: {
-    background: "#faf7fe",
+    background: "#fbf8ff",
   },
 
   inlineActions: {
@@ -1979,10 +2085,10 @@ const styles = {
   infoRow: {
     display: "flex",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 14,
     alignItems: "center",
-    borderBottom: "1px solid #f1ebf8",
-    paddingBottom: 10,
+    borderBottom: `1px solid ${borderSoft}`,
+    paddingBottom: 11,
   },
 
   infoLabel: {
@@ -1999,24 +2105,27 @@ const styles = {
   emptyState: {
     border: `1px dashed ${border}`,
     borderRadius: 18,
-    padding: 22,
+    padding: 24,
     textAlign: "center",
     color: muted,
     background: "#fcfbfe",
+    fontSize: 14,
   },
 
   quickActions: {
     display: "grid",
-    gap: 10,
+    gap: 12,
   },
 
   quickButton: {
     border: `1px solid ${border}`,
     borderRadius: 16,
-    padding: "14px 16px",
+    height: 50,
+    padding: "0 16px",
     background: "#faf7fe",
     color: ink,
     fontWeight: 800,
+    fontSize: 14,
     textAlign: "left",
     cursor: "pointer",
   },
@@ -2024,7 +2133,7 @@ const styles = {
   promoGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-    gap: 14,
+    gap: 16,
   },
 
   promoCard: {
@@ -2051,7 +2160,7 @@ const styles = {
     alignItems: "center",
     borderRadius: 999,
     padding: "7px 10px",
-    background: "#efe7fb",
+    background: accentSoft,
     color: accentDark,
     fontSize: 12,
     fontWeight: 800,
@@ -2059,8 +2168,9 @@ const styles = {
 
   promoTitle: {
     margin: 0,
-    fontSize: 18,
+    fontSize: 17,
     color: ink,
+    letterSpacing: "-0.02em",
   },
 
   promoText: {
