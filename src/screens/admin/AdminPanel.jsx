@@ -1,15 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
-import "./AdminPanel.css";
-import logoFallback from "../../assets/logo.png";
+import { useMemo, useState } from "react";
 
-const NAV_ITEMS = [
-  { key: "dashboard", label: "Dashboard" },
-  { key: "clientes", label: "Clientes" },
-  { key: "cardapio", label: "Cardápio" },
-  { key: "pedidos", label: "Pedidos" },
-  { key: "fidelidade", label: "Fidelidade" },
-  { key: "promocoes", label: "Promoções" },
-  { key: "configuracoes", label: "Configurações" },
+const accent = "#6f3cc3";
+const accentDark = "#522b93";
+const border = "#eadff7";
+const ink = "#2f2340";
+const muted = "#7b6d8d";
+const bg = "#f6f1fb";
+const white = "#ffffff";
+const success = "#2f8f57";
+const danger = "#cf4d6f";
+const warning = "#d38b1f";
+
+const tabs = [
+  { id: "overview", label: "Visão geral" },
+  { id: "customers", label: "Clientes" },
+  { id: "products", label: "Produtos" },
+  { id: "promos", label: "Promoções" },
+  { id: "orders", label: "Pedidos" },
+  { id: "checkins", label: "Check-ins" },
+  { id: "settings", label: "Configurações" },
+  { id: "team", label: "Equipe" },
 ];
 
 const emptyCustomerForm = {
@@ -26,7 +36,7 @@ const emptyCustomerForm = {
 const emptyProductForm = {
   id: "",
   name: "",
-  category: "Açaí",
+  category: "",
   price: "",
   description: "",
   available: true,
@@ -35,51 +45,44 @@ const emptyProductForm = {
 const emptyPromoForm = {
   id: "",
   title: "",
-  type: "Happy Hour",
+  type: "",
   description: "",
   image: "",
 };
 
-const emptyStaffForm = {
-  id: "",
-  name: "",
-  email: "",
-  login: "",
-  username: "",
-  employeeId: "",
-  phone: "",
-  role: "Funcionário",
-  password: "",
-  pin: "",
-  active: true,
+const emptyOrderForm = {
+  customerId: "",
+  productId: "",
+  channel: "Balcão",
+  status: "Recebido",
+  total: "",
+  note: "",
 };
 
-function money(value) {
-  return Number(value || 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
+const emptyBonusForm = {
+  customerId: "",
+  points: "",
+};
 
-function statusClass(status) {
-  if (status === "Entregue" || status === "Pronto") return "is-success";
-  if (status === "Cancelado") return "is-danger";
-  return "is-warning";
-}
-
-function digits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
+const emptyStaffForm = {
+  name: "",
+  login: "",
+  role: "Funcionário",
+  password: "",
+};
 
 export default function AdminPanel({
   onBack,
   onLogout,
-  customers,
-  products,
-  orders,
-  promos,
-  config,
-  staffUsers,
+  customers = [],
+  products = [],
+  orders = [],
+  promos = [],
+  config = {},
+  staffUsers = [],
+  pendingCheckins = [],
+  onApproveCheckin,
+  onRejectCheckin,
   selectedCustomerId,
   onSelectCustomer,
   onAddCustomer,
@@ -95,1299 +98,2038 @@ export default function AdminPanel({
   onAddBonus,
   onSaveConfig,
   onAddStaffUser,
-  onUpdateStaffUser,
   onDeleteStaffUser,
-  branding,
-  whatsappLink,
-  staffSession,
+  branding = {},
+  whatsappLink = "",
 }) {
-  const [activePage, setActivePage] = useState("dashboard");
-  const [customerSearch, setCustomerSearch] = useState("");
-
-  const selectedCustomer =
-    customers.find((customer) => customer.id === selectedCustomerId) || null;
+  const [activeTab, setActiveTab] = useState("overview");
+  const [busy, setBusy] = useState("");
+  const [notice, setNotice] = useState({ type: "", text: "" });
 
   const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
   const [productForm, setProductForm] = useState(emptyProductForm);
   const [promoForm, setPromoForm] = useState(emptyPromoForm);
-  const [staffForm, setStaffForm] = useState(emptyStaffForm);
-  const [selectedStaffId, setSelectedStaffId] = useState("");
-
-  useEffect(() => {
-    if (selectedCustomer) {
-      setCustomerForm({
-        id: selectedCustomer.id,
-        name: selectedCustomer.name || "",
-        phone: selectedCustomer.phone || "",
-        birth: selectedCustomer.birth || "",
-        pin: selectedCustomer.pin || "",
-        email: selectedCustomer.email || "",
-        address: selectedCustomer.address || "",
-        tier: selectedCustomer.tier || "Bronze",
-      });
-      return;
-    }
-    setCustomerForm(emptyCustomerForm);
-  }, [selectedCustomerId, selectedCustomer]);
-
-  const selectedStaff =
-    staffUsers.find((user) => user.id === selectedStaffId) || null;
-
-  useEffect(() => {
-    if (selectedStaff) {
-      setStaffForm({
-        id: selectedStaff.id,
-        name: selectedStaff.name || "",
-        email: selectedStaff.email || "",
-        login: selectedStaff.login || "",
-        username: selectedStaff.username || "",
-        employeeId: selectedStaff.employeeId || "",
-        phone: selectedStaff.phone || "",
-        role: selectedStaff.role || "Funcionário",
-        password: selectedStaff.password || "",
-        pin: selectedStaff.pin || "",
-        active: selectedStaff.active ?? true,
-      });
-      return;
-    }
-
-    setStaffForm(emptyStaffForm);
-  }, [selectedStaff]);
-
   const [orderForm, setOrderForm] = useState({
-    customerId: "",
-    productId: "",
-    channel: "Balcão",
-    status: "Recebido",
-    total: "",
-    note: "",
+    ...emptyOrderForm,
+    customerId: selectedCustomerId || customers[0]?.id || "",
   });
-
   const [bonusForm, setBonusForm] = useState({
-    customerId: "",
-    points: "",
+    ...emptyBonusForm,
+    customerId: selectedCustomerId || customers[0]?.id || "",
+  });
+  const [staffForm, setStaffForm] = useState(emptyStaffForm);
+  const [settingsForm, setSettingsForm] = useState({
+    pointsPerReal: String(config.pointsPerReal || 10),
+    spendGoal: String(config.spendGoal || 250),
+    checkinPercent: String(config.checkinPercent || 10),
+    softwareName: branding.softwareName || "Clube Base",
+    companyName: branding.companyName || "Minha Loja",
+    logoUrl: branding.logoUrl || "",
+    instagramUrl: branding.instagramUrl || "",
+    whatsappNumber: branding.whatsappNumber || "",
+    whatsappMessage: branding.whatsappMessage || "Olá! Vim pelo app.",
+    welcomePhrase: branding.welcomePhrase || "Seu clube de pontos da loja.",
   });
 
-  const [configForm, setConfigForm] = useState({
-    pointsPerReal: config.pointsPerReal,
-    spendGoal: config.spendGoal,
-    checkinPercent: config.checkinPercent,
-    softwareName: branding.softwareName,
-    companyName: branding.companyName,
-    logoUrl: branding.logoUrl,
-    instagramUrl: branding.instagramUrl,
-    whatsappNumber: branding.whatsappNumber,
-    whatsappMessage: branding.whatsappMessage,
-    welcomePhrase: branding.welcomePhrase,
-  });
+  const selectedCustomer =
+    customers.find((customer) => customer.id === selectedCustomerId) || customers[0] || null;
 
-  useEffect(() => {
-    setConfigForm({
-      pointsPerReal: config.pointsPerReal,
-      spendGoal: config.spendGoal,
-      checkinPercent: config.checkinPercent,
-      softwareName: branding.softwareName,
-      companyName: branding.companyName,
-      logoUrl: branding.logoUrl,
-      instagramUrl: branding.instagramUrl,
-      whatsappNumber: branding.whatsappNumber,
-      whatsappMessage: branding.whatsappMessage,
-      welcomePhrase: branding.welcomePhrase,
-    });
-  }, [config, branding]);
-
-  const filteredCustomers = useMemo(() => {
-    const term = customerSearch.trim().toLowerCase();
-    if (!term) return customers;
-    return customers.filter((customer) => {
-      const haystack = [customer.name, customer.phone, customer.email, customer.address, customer.tier]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(term);
-    });
-  }, [customers, customerSearch]);
-
-  const kpis = useMemo(() => {
-    const revenue = orders
-      .filter((order) => order.status !== "Cancelado")
-      .reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const stats = useMemo(() => {
+    const totalRevenue = orders.reduce((sum, item) => sum + Number(item.total || 0), 0);
+    const totalPoints = customers.reduce((sum, item) => sum + Number(item.points || 0), 0);
+    const totalCoupons = customers.reduce(
+      (sum, item) => sum + (Array.isArray(item.coupons) ? item.coupons.filter((coupon) => coupon.active).length : 0),
+      0
+    );
 
     return {
-      customers: customers.length,
-      orders: orders.length,
-      promos: promos.length,
-      revenue: money(revenue),
+      totalCustomers: customers.length,
+      totalProducts: products.length,
+      totalPromos: promos.length,
+      totalOrders: orders.length,
+      totalRevenue,
+      totalPoints,
+      totalCoupons,
+      pendingCheckins: pendingCheckins.length,
     };
-  }, [customers, orders, promos]);
+  }, [customers, products, promos, orders, pendingCheckins]);
 
-  const logoSrc = branding?.logoUrl || logoFallback;
+  function showSuccess(text) {
+    setNotice({ type: "success", text });
+  }
 
-  const handleCustomerSubmit = (event) => {
-    event.preventDefault();
-    if (!customerForm.name.trim() || digits(customerForm.phone).length < 10 || !customerForm.pin.trim()) {
-      alert("Preencha nome, telefone e PIN.");
-      return;
+  function showError(error) {
+    setNotice({
+      type: "error",
+      text: error?.message || "Não foi possível concluir a ação.",
+    });
+  }
+
+  async function runTask(key, action, successText) {
+    try {
+      setBusy(key);
+      setNotice({ type: "", text: "" });
+      await action();
+      if (successText) showSuccess(successText);
+    } catch (error) {
+      showError(error);
+    } finally {
+      setBusy("");
     }
+  }
 
-    const payload = {
-      id: customerForm.id,
-      name: customerForm.name.trim(),
-      phone: customerForm.phone.trim(),
-      birth: customerForm.birth,
-      pin: customerForm.pin.trim(),
-      email: customerForm.email.trim(),
-      address: customerForm.address.trim(),
-      tier: customerForm.tier,
-    };
-
-    if (customerForm.id) {
-      onUpdateCustomer(payload);
-      alert("Cliente atualizado com sucesso.");
-      return;
-    }
-
-    onAddCustomer(payload);
+  function resetCustomerForm() {
     setCustomerForm(emptyCustomerForm);
-  };
+  }
 
-  const handleNewCustomer = () => {
-    onSelectCustomer("");
-    setActivePage("clientes");
-    setCustomerForm(emptyCustomerForm);
-  };
-
-  const handleSelectCustomerRow = (customerId) => {
-    onSelectCustomer(customerId);
-    setActivePage("clientes");
-  };
-
-  const handleDeleteCustomerClick = () => {
-    if (!customerForm.id) return;
-    if (!window.confirm("Deseja excluir este cliente?")) return;
-    onDeleteCustomer(customerForm.id);
-    setCustomerForm(emptyCustomerForm);
-    alert("Cliente excluído.");
-  };
-
-  const handleProductSubmit = (event) => {
-    event.preventDefault();
-    if (!productForm.name.trim() || !Number(String(productForm.price).replace(",", "."))) {
-      alert("Preencha nome e preço.");
-      return;
-    }
-
-    const payload = {
-      id: productForm.id,
-      name: productForm.name.trim(),
-      category: productForm.category,
-      price: Number(String(productForm.price).replace(",", ".")),
-      description: productForm.description.trim(),
-      available: productForm.available,
-    };
-
-    if (productForm.id) {
-      onUpdateProduct(payload);
-      alert("Produto atualizado com sucesso.");
-      return;
-    }
-
-    onAddProduct(payload);
+  function resetProductForm() {
     setProductForm(emptyProductForm);
-  };
+  }
 
-  const handleEditProduct = (product) => {
+  function resetPromoForm() {
+    setPromoForm(emptyPromoForm);
+  }
+
+  function resetOrderForm() {
+    setOrderForm({
+      ...emptyOrderForm,
+      customerId: selectedCustomerId || customers[0]?.id || "",
+    });
+  }
+
+  function resetBonusForm() {
+    setBonusForm({
+      ...emptyBonusForm,
+      customerId: selectedCustomerId || customers[0]?.id || "",
+    });
+  }
+
+  function resetStaffForm() {
+    setStaffForm(emptyStaffForm);
+  }
+
+  function handleEditCustomer(customer) {
+    setCustomerForm({
+      id: customer.id,
+      name: customer.name || "",
+      phone: customer.phone || "",
+      birth: customer.birth || "",
+      pin: customer.pin || "",
+      email: customer.email || "",
+      address: customer.address || "",
+      tier: customer.tier || "Bronze",
+    });
+    setActiveTab("customers");
+  }
+
+  function handleEditProduct(product) {
     setProductForm({
       id: product.id,
       name: product.name || "",
-      category: product.category || "Açaí",
-      price: product.price || "",
+      category: product.category || "",
+      price: String(product.price ?? ""),
       description: product.description || "",
       available: !!product.available,
     });
-    setActivePage("cardapio");
-  };
+    setActiveTab("products");
+  }
 
-  const handleNewProduct = () => {
-    setProductForm(emptyProductForm);
-    setActivePage("cardapio");
-  };
-
-  const handleDeleteProductClick = () => {
-    if (!productForm.id) return;
-    if (!window.confirm("Deseja excluir este produto?")) return;
-    onDeleteProduct(productForm.id);
-    setProductForm(emptyProductForm);
-    alert("Produto excluído.");
-  };
-
-  const handleOrderSubmit = (event) => {
-    event.preventDefault();
-    if (!orderForm.customerId || !orderForm.productId || !Number(String(orderForm.total).replace(",", "."))) {
-      alert("Selecione cliente, produto e valor.");
-      return;
-    }
-
-    onAddOrder({
-      ...orderForm,
-      total: Number(String(orderForm.total).replace(",", ".")),
-      note: orderForm.note.trim(),
-    });
-
-    setOrderForm({
-      customerId: "",
-      productId: "",
-      channel: "Balcão",
-      status: "Recebido",
-      total: "",
-      note: "",
-    });
-  };
-
-  const handlePromoSubmit = (event) => {
-    event.preventDefault();
-    if (!promoForm.title.trim() || !promoForm.description.trim()) {
-      alert("Preencha título e descrição.");
-      return;
-    }
-
-    const payload = {
-      id: promoForm.id,
-      title: promoForm.title.trim(),
-      type: promoForm.type,
-      description: promoForm.description.trim(),
-      image: promoForm.image.trim(),
-    };
-
-    if (promoForm.id) {
-      onUpdatePromo(payload);
-      alert("Promoção atualizada com sucesso.");
-      return;
-    }
-
-    onAddPromo(payload);
-    setPromoForm(emptyPromoForm);
-  };
-
-  const handleEditPromo = (promo) => {
+  function handleEditPromo(promo) {
     setPromoForm({
       id: promo.id,
       title: promo.title || "",
-      type: promo.type || "Happy Hour",
+      type: promo.type || "",
       description: promo.description || "",
       image: promo.image || "",
     });
-    setActivePage("promocoes");
-  };
+    setActiveTab("promos");
+  }
 
-  const handleNewPromo = () => {
-    setPromoForm(emptyPromoForm);
-    setActivePage("promocoes");
-  };
-
-  const handleDeletePromoClick = () => {
-    if (!promoForm.id) return;
-    if (!window.confirm("Deseja excluir esta promoção?")) return;
-    onDeletePromo(promoForm.id);
-    setPromoForm(emptyPromoForm);
-    alert("Promoção excluída.");
-  };
-
-  const handleBonusSubmit = (event) => {
+  async function submitCustomer(event) {
     event.preventDefault();
-    if (!bonusForm.customerId || !Number(bonusForm.points)) {
-      alert("Selecione cliente e informe os pontos.");
-      return;
-    }
 
-    onAddBonus({
-      customerId: bonusForm.customerId,
-      points: Number(bonusForm.points),
-    });
-
-    setBonusForm({
-      customerId: "",
-      points: "",
-    });
-  };
-
-  const handleConfigSubmit = (event) => {
-    event.preventDefault();
-    onSaveConfig({
-      pointsPerReal: Number(configForm.pointsPerReal),
-      spendGoal: Number(configForm.spendGoal),
-      checkinPercent: Number(configForm.checkinPercent),
-      softwareName: configForm.softwareName.trim(),
-      companyName: configForm.companyName.trim(),
-      logoUrl: configForm.logoUrl.trim(),
-      instagramUrl: configForm.instagramUrl.trim(),
-      whatsappNumber: configForm.whatsappNumber.trim(),
-      whatsappMessage: configForm.whatsappMessage.trim(),
-      welcomePhrase: configForm.welcomePhrase.trim(),
-    });
-    alert("Configurações salvas.");
-  };
-
-  const handleStaffSubmit = (event) => {
-    event.preventDefault();
-    if (
-      !staffForm.name.trim() ||
-      (!staffForm.login.trim() && !staffForm.username.trim() && !staffForm.employeeId.trim() && !staffForm.email.trim()) ||
-      !staffForm.password.trim()
-    ) {
-      alert("Preencha nome, um identificador de login e a senha.");
+    if (!customerForm.name || !customerForm.phone || !customerForm.pin) {
+      showError(new Error("Preencha nome, telefone e PIN do cliente."));
       return;
     }
 
     const payload = {
-      id: staffForm.id,
-      name: staffForm.name.trim(),
-      email: staffForm.email.trim(),
-      login: staffForm.login.trim(),
-      username: staffForm.username.trim(),
-      employeeId: staffForm.employeeId.trim(),
-      phone: staffForm.phone.trim(),
-      role: staffForm.role,
-      password: staffForm.password.trim(),
-      pin: staffForm.pin.trim(),
-      active: !!staffForm.active,
+      ...customerForm,
+      phone: customerForm.phone.trim(),
+      pin: customerForm.pin.trim(),
     };
 
-    if (staffForm.id) {
-      onUpdateStaffUser(payload);
-      alert("Funcionário atualizado.");
+    if (customerForm.id) {
+      await runTask("save-customer", async () => {
+        await onUpdateCustomer(payload);
+        resetCustomerForm();
+      }, "Cliente atualizado com sucesso.");
       return;
     }
 
-    onAddStaffUser(payload);
-    setStaffForm(emptyStaffForm);
-    alert("Funcionário cadastrado.");
-  };
+    await runTask("save-customer", async () => {
+      await onAddCustomer(payload);
+      resetCustomerForm();
+    }, "Cliente cadastrado com sucesso.");
+  }
 
-  const handleEditStaff = (user) => {
-    setSelectedStaffId(user.id);
-    setActivePage("configuracoes");
-  };
+  async function submitProduct(event) {
+    event.preventDefault();
 
-  const handleNewStaff = () => {
-    setSelectedStaffId("");
-    setStaffForm(emptyStaffForm);
-    setActivePage("configuracoes");
-  };
+    if (!productForm.name || !productForm.category || !productForm.price) {
+      showError(new Error("Preencha nome, categoria e preço do produto."));
+      return;
+    }
 
-  const handleDeleteStaffClick = () => {
-    if (!staffForm.id) return;
-    if (!window.confirm("Deseja excluir este funcionário?")) return;
-    onDeleteStaffUser(staffForm.id);
-    setSelectedStaffId("");
-    setStaffForm(emptyStaffForm);
-    alert("Funcionário excluído.");
-  };
+    const payload = {
+      ...productForm,
+      price: Number(productForm.price || 0),
+    };
 
-  return (
-    <div className="admin-panel">
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar__top">
-          <button type="button" className="admin-back-button" onClick={onBack}>
-            ← Voltar
-          </button>
+    if (productForm.id) {
+      await runTask("save-product", async () => {
+        await onUpdateProduct(payload);
+        resetProductForm();
+      }, "Produto atualizado com sucesso.");
+      return;
+    }
 
-          <button type="button" className="admin-back-button admin-back-button--alt" onClick={onLogout}>
-            Sair
-          </button>
+    await runTask("save-product", async () => {
+      await onAddProduct(payload);
+      resetProductForm();
+    }, "Produto cadastrado com sucesso.");
+  }
 
-          <div className="admin-brand">
-            <div className="admin-brand-mark">
-              <img src={logoSrc} alt={`Logo ${branding.companyName}`} />
+  async function submitPromo(event) {
+    event.preventDefault();
+
+    if (!promoForm.title || !promoForm.description) {
+      showError(new Error("Preencha título e descrição da promoção."));
+      return;
+    }
+
+    const payload = { ...promoForm };
+
+    if (promoForm.id) {
+      await runTask("save-promo", async () => {
+        await onUpdatePromo(payload);
+        resetPromoForm();
+      }, "Promoção atualizada com sucesso.");
+      return;
+    }
+
+    await runTask("save-promo", async () => {
+      await onAddPromo(payload);
+      resetPromoForm();
+    }, "Promoção cadastrada com sucesso.");
+  }
+
+  async function submitOrder(event) {
+    event.preventDefault();
+
+    if (!orderForm.customerId || !orderForm.productId || !orderForm.total) {
+      showError(new Error("Preencha cliente, produto e valor do pedido."));
+      return;
+    }
+
+    await runTask("save-order", async () => {
+      await onAddOrder({
+        ...orderForm,
+        total: Number(orderForm.total || 0),
+      });
+      resetOrderForm();
+    }, "Pedido registrado com sucesso.");
+  }
+
+  async function submitBonus(event) {
+    event.preventDefault();
+
+    if (!bonusForm.customerId || !bonusForm.points) {
+      showError(new Error("Escolha um cliente e informe os pontos do bônus."));
+      return;
+    }
+
+    await runTask("save-bonus", async () => {
+      await onAddBonus({
+        customerId: bonusForm.customerId,
+        points: Number(bonusForm.points || 0),
+      });
+      resetBonusForm();
+    }, "Bônus aplicado com sucesso.");
+  }
+
+  async function submitSettings(event) {
+    event.preventDefault();
+
+    await runTask("save-settings", async () => {
+      await onSaveConfig({
+        pointsPerReal: Number(settingsForm.pointsPerReal || 10),
+        spendGoal: Number(settingsForm.spendGoal || 250),
+        checkinPercent: Number(settingsForm.checkinPercent || 10),
+        softwareName: settingsForm.softwareName,
+        companyName: settingsForm.companyName,
+        logoUrl: settingsForm.logoUrl,
+        instagramUrl: settingsForm.instagramUrl,
+        whatsappNumber: settingsForm.whatsappNumber,
+        whatsappMessage: settingsForm.whatsappMessage,
+        welcomePhrase: settingsForm.welcomePhrase,
+      });
+    }, "Configurações salvas com sucesso.");
+  }
+
+  async function submitStaff(event) {
+    event.preventDefault();
+
+    if (!staffForm.name || !staffForm.login || !staffForm.password) {
+      showError(new Error("Preencha nome, login e senha da equipe."));
+      return;
+    }
+
+    await runTask("save-staff", async () => {
+      await onAddStaffUser(staffForm);
+      resetStaffForm();
+    }, "Usuário da equipe adicionado.");
+  }
+
+  function sectionTitle(title, subtitle) {
+    return (
+      <div style={styles.sectionHeading}>
+        <div>
+          <h2 style={styles.sectionTitle}>{title}</h2>
+          <p style={styles.sectionSubtitle}>{subtitle}</p>
+        </div>
+      </div>
+    );
+  }
+
+  function renderOverview() {
+    return (
+      <div style={styles.stack}>
+        {sectionTitle(
+          "Painel da loja",
+          "Resumo da operação, atalhos e visão rápida dos principais números."
+        )}
+
+        <div style={styles.statsGrid}>
+          <StatCard label="Clientes" value={stats.totalCustomers} helper="Base cadastrada" />
+          <StatCard label="Produtos" value={stats.totalProducts} helper="Catálogo ativo" />
+          <StatCard label="Promoções" value={stats.totalPromos} helper="Campanhas visíveis" />
+          <StatCard label="Pedidos" value={stats.totalOrders} helper="Movimento total" />
+          <StatCard
+            label="Faturamento"
+            value={formatCurrency(stats.totalRevenue)}
+            helper="Soma dos pedidos"
+          />
+          <StatCard
+            label="Pontos"
+            value={stats.totalPoints}
+            helper="Saldo distribuído"
+          />
+          <StatCard
+            label="Cupons ativos"
+            value={stats.totalCoupons}
+            helper="Clientes com benefício"
+          />
+          <StatCard
+            label="Check-ins pendentes"
+            value={stats.pendingCheckins}
+            helper="Aguardando conferência"
+            highlight
+          />
+        </div>
+
+        <div style={styles.twoCols}>
+          <Card>
+            <h3 style={styles.cardTitle}>Cliente em destaque</h3>
+            {selectedCustomer ? (
+              <div style={styles.infoList}>
+                <InfoRow label="Nome" value={selectedCustomer.name} />
+                <InfoRow label="Telefone" value={selectedCustomer.phone || "-"} />
+                <InfoRow label="Pontos" value={selectedCustomer.points || 0} />
+                <InfoRow label="Gasto total" value={formatCurrency(selectedCustomer.totalSpent || 0)} />
+                <InfoRow label="Visitas" value={selectedCustomer.visits || 0} />
+                <InfoRow label="Nível" value={selectedCustomer.tier || "Bronze"} />
+              </div>
+            ) : (
+              <EmptyState text="Nenhum cliente selecionado no momento." />
+            )}
+          </Card>
+
+          <Card>
+            <h3 style={styles.cardTitle}>Atalhos rápidos</h3>
+            <div style={styles.quickActions}>
+              <QuickActionButton label="Cadastrar cliente" onClick={() => setActiveTab("customers")} />
+              <QuickActionButton label="Registrar pedido" onClick={() => setActiveTab("orders")} />
+              <QuickActionButton label="Aprovar check-ins" onClick={() => setActiveTab("checkins")} />
+              <QuickActionButton label="Editar configurações" onClick={() => setActiveTab("settings")} />
             </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
-            <div className="admin-brand-copy">
-              <span>{branding.softwareName}</span>
-              <h1>{branding.companyName}</h1>
-            </div>
+  function renderCustomers() {
+    return (
+      <div style={styles.stack}>
+        {sectionTitle(
+          "Clientes",
+          "Cadastre, edite, selecione e acompanhe a base de clientes da loja."
+        )}
+
+        <div style={styles.twoCols}>
+          <Card>
+            <h3 style={styles.cardTitle}>
+              {customerForm.id ? "Editar cliente" : "Novo cliente"}
+            </h3>
+
+            <form onSubmit={submitCustomer} style={styles.formGrid}>
+              <Field label="Nome completo">
+                <input
+                  style={styles.input}
+                  value={customerForm.name}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome do cliente"
+                />
+              </Field>
+
+              <Field label="Telefone">
+                <input
+                  style={styles.input}
+                  value={customerForm.phone}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  placeholder="(75) 99999-0000"
+                />
+              </Field>
+
+              <Field label="PIN">
+                <input
+                  style={styles.input}
+                  value={customerForm.pin}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, pin: e.target.value }))}
+                  placeholder="1234"
+                />
+              </Field>
+
+              <Field label="Nascimento">
+                <input
+                  type="date"
+                  style={styles.input}
+                  value={customerForm.birth}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, birth: e.target.value }))}
+                />
+              </Field>
+
+              <Field label="E-mail">
+                <input
+                  style={styles.input}
+                  value={customerForm.email}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="cliente@email.com"
+                />
+              </Field>
+
+              <Field label="Nível">
+                <select
+                  style={styles.input}
+                  value={customerForm.tier}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, tier: e.target.value }))}
+                >
+                  <option>Bronze</option>
+                  <option>Prata</option>
+                  <option>Ouro</option>
+                </select>
+              </Field>
+
+              <Field label="Endereço" full>
+                <input
+                  style={styles.input}
+                  value={customerForm.address}
+                  onChange={(e) => setCustomerForm((prev) => ({ ...prev, address: e.target.value }))}
+                  placeholder="Bairro, rua ou referência"
+                />
+              </Field>
+
+              <div style={styles.actionsRowFull}>
+                <button type="submit" style={styles.primaryButton} disabled={busy === "save-customer"}>
+                  {busy === "save-customer"
+                    ? "Salvando..."
+                    : customerForm.id
+                    ? "Atualizar cliente"
+                    : "Salvar cliente"}
+                </button>
+
+                <button type="button" style={styles.secondaryButton} onClick={resetCustomerForm}>
+                  Limpar formulário
+                </button>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <h3 style={styles.cardTitle}>Aplicar bônus</h3>
+            <form onSubmit={submitBonus} style={styles.formGrid}>
+              <Field label="Cliente" full>
+                <select
+                  style={styles.input}
+                  value={bonusForm.customerId}
+                  onChange={(e) => setBonusForm((prev) => ({ ...prev, customerId: e.target.value }))}
+                >
+                  <option value="">Selecione</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Pontos" full>
+                <input
+                  style={styles.input}
+                  value={bonusForm.points}
+                  onChange={(e) => setBonusForm((prev) => ({ ...prev, points: e.target.value }))}
+                  placeholder="Ex.: 50"
+                />
+              </Field>
+
+              <div style={styles.actionsRowFull}>
+                <button type="submit" style={styles.primaryButton} disabled={busy === "save-bonus"}>
+                  {busy === "save-bonus" ? "Aplicando..." : "Aplicar bônus"}
+                </button>
+              </div>
+            </form>
+          </Card>
+        </div>
+
+        <Card>
+          <div style={styles.listHeader}>
+            <h3 style={styles.cardTitle}>Lista de clientes</h3>
+            <span style={styles.miniBadge}>{customers.length} cadastrados</span>
           </div>
 
-          <div className="admin-contact-shortcuts">
-            {branding.instagramUrl && (
-              <a href={branding.instagramUrl} target="_blank" rel="noreferrer" className="admin-shortcut">
-                Instagram
-              </a>
-            )}
+          {!customers.length ? (
+            <EmptyState text="Nenhum cliente cadastrado ainda." />
+          ) : (
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Cliente</th>
+                    <th style={styles.th}>Telefone</th>
+                    <th style={styles.th}>Pontos</th>
+                    <th style={styles.th}>Visitas</th>
+                    <th style={styles.th}>Nível</th>
+                    <th style={styles.th}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.map((customer) => {
+                    const isSelected = customer.id === selectedCustomerId;
+                    return (
+                      <tr key={customer.id} style={isSelected ? styles.selectedRow : undefined}>
+                        <td style={styles.td}>{customer.name}</td>
+                        <td style={styles.td}>{customer.phone || "-"}</td>
+                        <td style={styles.td}>{customer.points || 0}</td>
+                        <td style={styles.td}>{customer.visits || 0}</td>
+                        <td style={styles.td}>{customer.tier || "Bronze"}</td>
+                        <td style={styles.td}>
+                          <div style={styles.inlineActions}>
+                            <button
+                              type="button"
+                              style={styles.ghostButton}
+                              onClick={() => onSelectCustomer(customer.id)}
+                            >
+                              Selecionar
+                            </button>
+                            <button
+                              type="button"
+                              style={styles.ghostButton}
+                              onClick={() => handleEditCustomer(customer)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              style={styles.dangerButton}
+                              onClick={() =>
+                                runTask(
+                                  `delete-customer-${customer.id}`,
+                                  async () => onDeleteCustomer(customer.id),
+                                  "Cliente removido com sucesso."
+                                )
+                              }
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
 
-            {whatsappLink && (
-              <a href={whatsappLink} target="_blank" rel="noreferrer" className="admin-shortcut">
-                WhatsApp
-              </a>
+  function renderProducts() {
+    return (
+      <div style={styles.stack}>
+        {sectionTitle(
+          "Produtos",
+          "Organize o catálogo da loja com preço, categoria e disponibilidade."
+        )}
+
+        <div style={styles.twoCols}>
+          <Card>
+            <h3 style={styles.cardTitle}>
+              {productForm.id ? "Editar produto" : "Novo produto"}
+            </h3>
+
+            <form onSubmit={submitProduct} style={styles.formGrid}>
+              <Field label="Nome">
+                <input
+                  style={styles.input}
+                  value={productForm.name}
+                  onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Açaí 500 ml"
+                />
+              </Field>
+
+              <Field label="Categoria">
+                <input
+                  style={styles.input}
+                  value={productForm.category}
+                  onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))}
+                  placeholder="Açaí"
+                />
+              </Field>
+
+              <Field label="Preço">
+                <input
+                  style={styles.input}
+                  value={productForm.price}
+                  onChange={(e) => setProductForm((prev) => ({ ...prev, price: e.target.value }))}
+                  placeholder="18"
+                />
+              </Field>
+
+              <Field label="Disponível">
+                <select
+                  style={styles.input}
+                  value={String(productForm.available)}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, available: e.target.value === "true" }))
+                  }
+                >
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
+              </Field>
+
+              <Field label="Descrição" full>
+                <textarea
+                  style={styles.textarea}
+                  value={productForm.description}
+                  onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Descreva rapidamente o produto"
+                />
+              </Field>
+
+              <div style={styles.actionsRowFull}>
+                <button type="submit" style={styles.primaryButton} disabled={busy === "save-product"}>
+                  {busy === "save-product"
+                    ? "Salvando..."
+                    : productForm.id
+                    ? "Atualizar produto"
+                    : "Salvar produto"}
+                </button>
+
+                <button type="button" style={styles.secondaryButton} onClick={resetProductForm}>
+                  Limpar formulário
+                </button>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <h3 style={styles.cardTitle}>Resumo do catálogo</h3>
+            <div style={styles.infoList}>
+              <InfoRow label="Produtos ativos" value={products.filter((item) => item.available).length} />
+              <InfoRow label="Produtos indisponíveis" value={products.filter((item) => !item.available).length} />
+              <InfoRow
+                label="Preço médio"
+                value={
+                  products.length
+                    ? formatCurrency(
+                        products.reduce((sum, item) => sum + Number(item.price || 0), 0) / products.length
+                      )
+                    : "R$ 0,00"
+                }
+              />
+            </div>
+          </Card>
+        </div>
+
+        <Card>
+          <div style={styles.listHeader}>
+            <h3 style={styles.cardTitle}>Lista de produtos</h3>
+            <span style={styles.miniBadge}>{products.length} itens</span>
+          </div>
+
+          {!products.length ? (
+            <EmptyState text="Nenhum produto cadastrado ainda." />
+          ) : (
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Produto</th>
+                    <th style={styles.th}>Categoria</th>
+                    <th style={styles.th}>Preço</th>
+                    <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((product) => (
+                    <tr key={product.id}>
+                      <td style={styles.td}>{product.name}</td>
+                      <td style={styles.td}>{product.category}</td>
+                      <td style={styles.td}>{formatCurrency(product.price || 0)}</td>
+                      <td style={styles.td}>
+                        <span
+                          style={{
+                            ...styles.statusBadge,
+                            background: product.available ? "#ebf7ef" : "#fff3ea",
+                            color: product.available ? success : warning,
+                          }}
+                        >
+                          {product.available ? "Disponível" : "Indisponível"}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <div style={styles.inlineActions}>
+                          <button type="button" style={styles.ghostButton} onClick={() => handleEditProduct(product)}>
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            style={styles.dangerButton}
+                            onClick={() =>
+                              runTask(
+                                `delete-product-${product.id}`,
+                                async () => onDeleteProduct(product.id),
+                                "Produto excluído com sucesso."
+                              )
+                            }
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
+
+  function renderPromos() {
+    return (
+      <div style={styles.stack}>
+        {sectionTitle(
+          "Promoções",
+          "Gerencie campanhas, textos promocionais e chamadas do cliente."
+        )}
+
+        <div style={styles.twoCols}>
+          <Card>
+            <h3 style={styles.cardTitle}>
+              {promoForm.id ? "Editar promoção" : "Nova promoção"}
+            </h3>
+
+            <form onSubmit={submitPromo} style={styles.formGrid}>
+              <Field label="Título">
+                <input
+                  style={styles.input}
+                  value={promoForm.title}
+                  onChange={(e) => setPromoForm((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Happy Hour Savana"
+                />
+              </Field>
+
+              <Field label="Tipo">
+                <input
+                  style={styles.input}
+                  value={promoForm.type}
+                  onChange={(e) => setPromoForm((prev) => ({ ...prev, type: e.target.value }))}
+                  placeholder="Campanha"
+                />
+              </Field>
+
+              <Field label="Imagem (URL)" full>
+                <input
+                  style={styles.input}
+                  value={promoForm.image}
+                  onChange={(e) => setPromoForm((prev) => ({ ...prev, image: e.target.value }))}
+                  placeholder="https://..."
+                />
+              </Field>
+
+              <Field label="Descrição" full>
+                <textarea
+                  style={styles.textarea}
+                  value={promoForm.description}
+                  onChange={(e) => setPromoForm((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Explique a promoção de forma clara"
+                />
+              </Field>
+
+              <div style={styles.actionsRowFull}>
+                <button type="submit" style={styles.primaryButton} disabled={busy === "save-promo"}>
+                  {busy === "save-promo"
+                    ? "Salvando..."
+                    : promoForm.id
+                    ? "Atualizar promoção"
+                    : "Salvar promoção"}
+                </button>
+
+                <button type="button" style={styles.secondaryButton} onClick={resetPromoForm}>
+                  Limpar formulário
+                </button>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <h3 style={styles.cardTitle}>Resumo promocional</h3>
+            <div style={styles.infoList}>
+              <InfoRow label="Promoções ativas" value={promos.length} />
+              <InfoRow label="Texto de boas-vindas" value={branding.welcomePhrase || "-"} />
+              <InfoRow label="Instagram atual" value={branding.instagramUrl || "-"} />
+            </div>
+          </Card>
+        </div>
+
+        <Card>
+          <div style={styles.listHeader}>
+            <h3 style={styles.cardTitle}>Lista de promoções</h3>
+            <span style={styles.miniBadge}>{promos.length} campanhas</span>
+          </div>
+
+          {!promos.length ? (
+            <EmptyState text="Nenhuma promoção cadastrada ainda." />
+          ) : (
+            <div style={styles.promoGrid}>
+              {promos.map((promo) => (
+                <div key={promo.id} style={styles.promoCard}>
+                  <div style={styles.promoContent}>
+                    <div style={styles.promoTop}>
+                      <span style={styles.promoTag}>{promo.type || "Promoção"}</span>
+                    </div>
+                    <h4 style={styles.promoTitle}>{promo.title}</h4>
+                    <p style={styles.promoText}>{promo.description}</p>
+                    <div style={styles.inlineActions}>
+                      <button type="button" style={styles.ghostButton} onClick={() => handleEditPromo(promo)}>
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        style={styles.dangerButton}
+                        onClick={() =>
+                          runTask(
+                            `delete-promo-${promo.id}`,
+                            async () => onDeletePromo(promo.id),
+                            "Promoção excluída com sucesso."
+                          )
+                        }
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
+
+  function renderOrders() {
+    return (
+      <div style={styles.stack}>
+        {sectionTitle(
+          "Pedidos",
+          "Registre vendas da loja e atualize automaticamente os pontos do cliente."
+        )}
+
+        <div style={styles.twoCols}>
+          <Card>
+            <h3 style={styles.cardTitle}>Novo pedido</h3>
+            <form onSubmit={submitOrder} style={styles.formGrid}>
+              <Field label="Cliente" full>
+                <select
+                  style={styles.input}
+                  value={orderForm.customerId}
+                  onChange={(e) => setOrderForm((prev) => ({ ...prev, customerId: e.target.value }))}
+                >
+                  <option value="">Selecione</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Produto" full>
+                <select
+                  style={styles.input}
+                  value={orderForm.productId}
+                  onChange={(e) => {
+                    const productId = e.target.value;
+                    const product = products.find((item) => item.id === productId);
+                    setOrderForm((prev) => ({
+                      ...prev,
+                      productId,
+                      total: product ? String(product.price || "") : prev.total,
+                    }));
+                  }}
+                >
+                  <option value="">Selecione</option>
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Canal">
+                <select
+                  style={styles.input}
+                  value={orderForm.channel}
+                  onChange={(e) => setOrderForm((prev) => ({ ...prev, channel: e.target.value }))}
+                >
+                  <option>Balcão</option>
+                  <option>WhatsApp</option>
+                  <option>Entrega</option>
+                </select>
+              </Field>
+
+              <Field label="Status">
+                <select
+                  style={styles.input}
+                  value={orderForm.status}
+                  onChange={(e) => setOrderForm((prev) => ({ ...prev, status: e.target.value }))}
+                >
+                  <option>Recebido</option>
+                  <option>Em preparo</option>
+                  <option>Finalizado</option>
+                </select>
+              </Field>
+
+              <Field label="Valor">
+                <input
+                  style={styles.input}
+                  value={orderForm.total}
+                  onChange={(e) => setOrderForm((prev) => ({ ...prev, total: e.target.value }))}
+                  placeholder="18"
+                />
+              </Field>
+
+              <Field label="Observação" full>
+                <textarea
+                  style={styles.textarea}
+                  value={orderForm.note}
+                  onChange={(e) => setOrderForm((prev) => ({ ...prev, note: e.target.value }))}
+                  placeholder="Ex.: sem banana"
+                />
+              </Field>
+
+              <div style={styles.actionsRowFull}>
+                <button type="submit" style={styles.primaryButton} disabled={busy === "save-order"}>
+                  {busy === "save-order" ? "Registrando..." : "Salvar pedido"}
+                </button>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <h3 style={styles.cardTitle}>Indicadores do caixa</h3>
+            <div style={styles.infoList}>
+              <InfoRow label="Pedidos totais" value={orders.length} />
+              <InfoRow
+                label="Ticket médio"
+                value={
+                  orders.length
+                    ? formatCurrency(
+                        orders.reduce((sum, item) => sum + Number(item.total || 0), 0) / orders.length
+                      )
+                    : "R$ 0,00"
+                }
+              />
+              <InfoRow
+                label="Faturamento"
+                value={formatCurrency(orders.reduce((sum, item) => sum + Number(item.total || 0), 0))}
+              />
+            </div>
+          </Card>
+        </div>
+
+        <Card>
+          <div style={styles.listHeader}>
+            <h3 style={styles.cardTitle}>Lista de pedidos</h3>
+            <span style={styles.miniBadge}>{orders.length} registros</span>
+          </div>
+
+          {!orders.length ? (
+            <EmptyState text="Nenhum pedido registrado ainda." />
+          ) : (
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Cliente</th>
+                    <th style={styles.th}>Produto</th>
+                    <th style={styles.th}>Canal</th>
+                    <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Total</th>
+                    <th style={styles.th}>Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id}>
+                      <td style={styles.td}>{order.customerName || "-"}</td>
+                      <td style={styles.td}>{order.productName || "-"}</td>
+                      <td style={styles.td}>{order.channel || "-"}</td>
+                      <td style={styles.td}>{order.status || "-"}</td>
+                      <td style={styles.td}>{formatCurrency(order.total || 0)}</td>
+                      <td style={styles.td}>{formatDate(order.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
+
+  function renderCheckins() {
+    return (
+      <div style={styles.stack}>
+        {sectionTitle(
+          "Check-ins pendentes",
+          "Confira o Story no balcão e aprove ou recuse o benefício do cliente."
+        )}
+
+        <Card>
+          <div style={styles.listHeader}>
+            <h3 style={styles.cardTitle}>Solicitações aguardando equipe</h3>
+            <span style={styles.miniBadge}>{pendingCheckins.length} pendentes</span>
+          </div>
+
+          {!pendingCheckins.length ? (
+            <EmptyState text="Nenhum check-in aguardando aprovação agora." />
+          ) : (
+            <div style={styles.checkinList}>
+              {pendingCheckins.map((item) => (
+                <div key={item.id} style={styles.checkinCard}>
+                  <div>
+                    <strong style={styles.checkinName}>
+                      {item.customers?.full_name || "Cliente"}
+                    </strong>
+                    <p style={styles.checkinMeta}>Telefone: {item.customers?.phone || "-"}</p>
+                    <p style={styles.checkinMeta}>Solicitado em: {formatDate(item.requested_at, true)}</p>
+                    <p style={styles.checkinMeta}>Instagram: {item.instagram_handle || branding.instagramUrl || "-"}</p>
+                  </div>
+
+                  <div style={styles.inlineActions}>
+                    <button
+                      type="button"
+                      style={styles.primaryButton}
+                      disabled={busy === `approve-checkin-${item.id}`}
+                      onClick={() =>
+                        runTask(
+                          `approve-checkin-${item.id}`,
+                          async () => onApproveCheckin(item),
+                          "Check-in aprovado com sucesso."
+                        )
+                      }
+                    >
+                      Aprovar
+                    </button>
+
+                    <button
+                      type="button"
+                      style={styles.dangerButton}
+                      disabled={busy === `reject-checkin-${item.id}`}
+                      onClick={() =>
+                        runTask(
+                          `reject-checkin-${item.id}`,
+                          async () => onRejectCheckin(item),
+                          "Check-in recusado."
+                        )
+                      }
+                    >
+                      Recusar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
+
+  function renderSettings() {
+    return (
+      <div style={styles.stack}>
+        {sectionTitle(
+          "Configurações",
+          "Ajuste pontuação, meta, identidade visual e canais da loja."
+        )}
+
+        <Card>
+          <h3 style={styles.cardTitle}>Parâmetros da loja e marca</h3>
+
+          <form onSubmit={submitSettings} style={styles.formGrid}>
+            <Field label="Pontos por real">
+              <input
+                style={styles.input}
+                value={settingsForm.pointsPerReal}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, pointsPerReal: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Meta de recompensa">
+              <input
+                style={styles.input}
+                value={settingsForm.spendGoal}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, spendGoal: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Desconto do check-in (%)">
+              <input
+                style={styles.input}
+                value={settingsForm.checkinPercent}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, checkinPercent: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Nome do software">
+              <input
+                style={styles.input}
+                value={settingsForm.softwareName}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, softwareName: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Nome da loja">
+              <input
+                style={styles.input}
+                value={settingsForm.companyName}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, companyName: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Logo (URL)">
+              <input
+                style={styles.input}
+                value={settingsForm.logoUrl}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, logoUrl: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Instagram">
+              <input
+                style={styles.input}
+                value={settingsForm.instagramUrl}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, instagramUrl: e.target.value }))
+                }
+                placeholder="@sualoja"
+              />
+            </Field>
+
+            <Field label="WhatsApp">
+              <input
+                style={styles.input}
+                value={settingsForm.whatsappNumber}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, whatsappNumber: e.target.value }))
+                }
+                placeholder="5575999990000"
+              />
+            </Field>
+
+            <Field label="Mensagem do WhatsApp" full>
+              <input
+                style={styles.input}
+                value={settingsForm.whatsappMessage}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, whatsappMessage: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Frase de boas-vindas" full>
+              <textarea
+                style={styles.textarea}
+                value={settingsForm.welcomePhrase}
+                onChange={(e) =>
+                  setSettingsForm((prev) => ({ ...prev, welcomePhrase: e.target.value }))
+                }
+              />
+            </Field>
+
+            <div style={styles.actionsRowFull}>
+              <button type="submit" style={styles.primaryButton} disabled={busy === "save-settings"}>
+                {busy === "save-settings" ? "Salvando..." : "Salvar configurações"}
+              </button>
+
+              {whatsappLink ? (
+                <a
+                  href={whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.linkButton}
+                >
+                  Abrir WhatsApp
+                </a>
+              ) : null}
+            </div>
+          </form>
+        </Card>
+      </div>
+    );
+  }
+
+  function renderTeam() {
+    return (
+      <div style={styles.stack}>
+        {sectionTitle(
+          "Equipe",
+          "Cadastre acessos internos para uso da operação."
+        )}
+
+        <div style={styles.twoCols}>
+          <Card>
+            <h3 style={styles.cardTitle}>Novo usuário da equipe</h3>
+
+            <form onSubmit={submitStaff} style={styles.formGrid}>
+              <Field label="Nome">
+                <input
+                  style={styles.input}
+                  value={staffForm.name}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome do colaborador"
+                />
+              </Field>
+
+              <Field label="Login">
+                <input
+                  style={styles.input}
+                  value={staffForm.login}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, login: e.target.value }))}
+                  placeholder="001"
+                />
+              </Field>
+
+              <Field label="Função">
+                <select
+                  style={styles.input}
+                  value={staffForm.role}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, role: e.target.value }))}
+                >
+                  <option>Funcionário</option>
+                  <option>Administrador</option>
+                </select>
+              </Field>
+
+              <Field label="Senha">
+                <input
+                  style={styles.input}
+                  value={staffForm.password}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, password: e.target.value }))}
+                  placeholder="Senha de acesso"
+                />
+              </Field>
+
+              <div style={styles.actionsRowFull}>
+                <button type="submit" style={styles.primaryButton} disabled={busy === "save-staff"}>
+                  {busy === "save-staff" ? "Salvando..." : "Adicionar usuário"}
+                </button>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <h3 style={styles.cardTitle}>Acessos cadastrados</h3>
+
+            {!staffUsers.length ? (
+              <EmptyState text="Nenhum usuário da equipe cadastrado ainda." />
+            ) : (
+              <div style={styles.teamList}>
+                {staffUsers.map((user) => (
+                  <div key={user.id} style={styles.teamCard}>
+                    <div>
+                      <strong style={styles.teamName}>{user.name}</strong>
+                      <p style={styles.teamMeta}>Login: {user.login}</p>
+                      <p style={styles.teamMeta}>Função: {user.role}</p>
+                    </div>
+                    <button
+                      type="button"
+                      style={styles.dangerButton}
+                      onClick={() => onDeleteStaffUser(user.id)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  function renderActiveTab() {
+    switch (activeTab) {
+      case "overview":
+        return renderOverview();
+      case "customers":
+        return renderCustomers();
+      case "products":
+        return renderProducts();
+      case "promos":
+        return renderPromos();
+      case "orders":
+        return renderOrders();
+      case "checkins":
+        return renderCheckins();
+      case "settings":
+        return renderSettings();
+      case "team":
+        return renderTeam();
+      default:
+        return renderOverview();
+    }
+  }
+
+  return (
+    <div style={styles.page}>
+      <aside style={styles.sidebar}>
+        <div style={styles.brandBlock}>
+          <div style={styles.logoBubble}>
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt="Logo da loja" style={styles.logoImage} />
+            ) : (
+              <span style={styles.logoFallback}>V</span>
+            )}
+          </div>
+
+          <div>
+            <p style={styles.eyebrow}>{branding.softwareName || "Voltta"}</p>
+            <h1 style={styles.brandTitle}>{branding.companyName || "Minha Loja"}</h1>
+            <p style={styles.brandSubtitle}>
+              {branding.welcomePhrase || "Painel da operação da loja"}
+            </p>
           </div>
         </div>
 
-        <nav className="admin-nav" aria-label="Navegação do painel">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`admin-nav__button ${activePage === item.key ? "is-active" : ""}`}
-              onClick={() => setActivePage(item.key)}
-            >
-              {item.label}
-            </button>
-          ))}
+        <nav style={styles.nav}>
+          {tabs.map((tab) => {
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  ...styles.navButton,
+                  ...(active ? styles.navButtonActive : {}),
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </nav>
+
+        <div style={styles.sidebarFooter}>
+          <button type="button" style={styles.secondaryButtonWide} onClick={onBack}>
+            Voltar
+          </button>
+          <button type="button" style={styles.primaryButtonWide} onClick={onLogout}>
+            Sair do painel
+          </button>
+        </div>
       </aside>
 
-      <main className="admin-content">
-        {activePage === "dashboard" && (
-          <section className="admin-page">
-            <div className="admin-hero">
-              <div>
-                <span className="admin-eyebrow">{branding.softwareName}</span>
-                <h2>Resumo da operação</h2>
-                <p>{branding.companyName}</p>
-              </div>
-
-              <div className="admin-hero__badge">
-                <strong>{staffSession?.isMaster ? "Modo master" : "Painel ativo"}</strong>
-                <span>
-                  {staffSession?.isMaster
-                    ? "Acesso de emergência habilitado."
-                    : "Gerencie clientes, equipe e fidelidade."}
-                </span>
-              </div>
-            </div>
-
-            <div className="admin-kpis">
-              <article className="admin-kpi">
-                <span>Clientes</span>
-                <strong>{kpis.customers}</strong>
-                <small>Base atual</small>
-              </article>
-
-              <article className="admin-kpi">
-                <span>Pedidos</span>
-                <strong>{kpis.orders}</strong>
-                <small>Pedidos lançados</small>
-              </article>
-
-              <article className="admin-kpi">
-                <span>Promoções</span>
-                <strong>{kpis.promos}</strong>
-                <small>Campanhas</small>
-              </article>
-
-              <article className="admin-kpi">
-                <span>Faturamento</span>
-                <strong>{kpis.revenue}</strong>
-                <small>Total demonstrativo</small>
-              </article>
-            </div>
-          </section>
-        )}
-
-        {activePage === "clientes" && (
-          <section className="admin-page">
-            <div className="admin-section-hero">
-              <div>
-                <h2>Clientes</h2>
-                <p>Cadastro e consulta.</p>
-              </div>
-
-              <div className="admin-actions">
-                <button type="button" className="btn-secondary" onClick={handleNewCustomer}>
-                  Novo cliente
-                </button>
-              </div>
-            </div>
-
-            <section className="admin-card admin-card--spaced">
-              <div className="admin-card__header">
-                <h3>Busca</h3>
-                <span>{filteredCustomers.length} resultado(s)</span>
-              </div>
-
-              <input
-                type="text"
-                className="admin-search"
-                placeholder="Buscar cliente"
-                value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
-              />
-            </section>
-
-            <div className="admin-grid admin-grid--two">
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>{customerForm.id ? "Editar cliente" : "Novo cliente"}</h3>
-                  <span>{customerForm.id ? "Registro selecionado" : "Preencha os dados"}</span>
-                </div>
-
-                <form className="admin-form-grid" onSubmit={handleCustomerSubmit}>
-                  <label>
-                    Nome
-                    <input type="text" value={customerForm.name} onChange={(e) => setCustomerForm((prev) => ({ ...prev, name: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    Telefone
-                    <input type="text" value={customerForm.phone} onChange={(e) => setCustomerForm((prev) => ({ ...prev, phone: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    Nascimento
-                    <input type="date" value={customerForm.birth} onChange={(e) => setCustomerForm((prev) => ({ ...prev, birth: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    PIN
-                    <input type="text" value={customerForm.pin} onChange={(e) => setCustomerForm((prev) => ({ ...prev, pin: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    E-mail
-                    <input type="email" value={customerForm.email} onChange={(e) => setCustomerForm((prev) => ({ ...prev, email: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    Nível
-                    <select value={customerForm.tier} onChange={(e) => setCustomerForm((prev) => ({ ...prev, tier: e.target.value }))}>
-                      <option>Bronze</option>
-                      <option>Prata</option>
-                      <option>Ouro</option>
-                      <option>Diamante</option>
-                    </select>
-                  </label>
-
-                  <label className="admin-form-grid__full">
-                    Endereço
-                    <input type="text" value={customerForm.address} onChange={(e) => setCustomerForm((prev) => ({ ...prev, address: e.target.value }))} />
-                  </label>
-
-                  <div className="admin-actions admin-form-grid__full">
-                    <button type="submit" className="btn-primary">
-                      {customerForm.id ? "Salvar" : "Cadastrar"}
-                    </button>
-
-                    {customerForm.id && (
-                      <>
-                        <button type="button" className="btn-ghost" onClick={handleNewCustomer}>
-                          Limpar
-                        </button>
-                        <button type="button" className="btn-danger" onClick={handleDeleteCustomerClick}>
-                          Excluir
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </form>
-
-                {selectedCustomer && (
-                  <div className="admin-detail-box">
-                    <strong>Resumo</strong>
-                    <span>Pontos: {selectedCustomer.points}</span>
-                    <span>Gasto: {money(selectedCustomer.totalSpent)}</span>
-                    <span>Visitas: {selectedCustomer.visits}</span>
-                  </div>
-                )}
-              </section>
-
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>Base</h3>
-                  <span>{filteredCustomers.length} item(ns)</span>
-                </div>
-
-                <div className="admin-list">
-                  {filteredCustomers.map((customer) => (
-                    <button
-                      key={customer.id}
-                      type="button"
-                      className={`admin-list-item admin-list-item--button ${
-                        selectedCustomerId === customer.id ? "is-selected" : ""
-                      }`}
-                      onClick={() => handleSelectCustomerRow(customer.id)}
-                    >
-                      <div className="admin-list-item__top">
-                        <strong>{customer.name}</strong>
-                        <span className="admin-tag is-success">{customer.tier}</span>
-                      </div>
-
-                      <div className="admin-list-item__meta">
-                        {customer.phone} • {customer.email || "sem e-mail"}
-                      </div>
-
-                      <div className="admin-list-item__note">
-                        Pontos: {customer.points} • Gasto: {money(customer.totalSpent)}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </section>
-        )}
-
-        {activePage === "cardapio" && (
-          <section className="admin-page">
-            <div className="admin-section-hero">
-              <div>
-                <h2>Cardápio</h2>
-                <p>Itens e disponibilidade.</p>
-              </div>
-
-              <div className="admin-actions">
-                <button type="button" className="btn-secondary" onClick={handleNewProduct}>
-                  Novo produto
-                </button>
-              </div>
-            </div>
-
-            <div className="admin-grid admin-grid--two">
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>{productForm.id ? "Editar produto" : "Novo produto"}</h3>
-                  <span>{productForm.id ? "Produto selecionado" : "Preencha os dados"}</span>
-                </div>
-
-                <form className="admin-form-grid admin-form-grid--triple" onSubmit={handleProductSubmit}>
-                  <label>
-                    Nome
-                    <input type="text" value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    Categoria
-                    <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))}>
-                      <option>Açaí</option>
-                      <option>Sorvete</option>
-                      <option>Combo</option>
-                      <option>Bebida</option>
-                      <option>Extra</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Preço
-                    <input type="text" value={productForm.price} onChange={(e) => setProductForm((prev) => ({ ...prev, price: e.target.value }))} />
-                  </label>
-
-                  <label className="admin-form-grid__full">
-                    Descrição
-                    <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    Disponível
-                    <select
-                      value={productForm.available ? "true" : "false"}
-                      onChange={(e) =>
-                        setProductForm((prev) => ({
-                          ...prev,
-                          available: e.target.value === "true",
-                        }))
-                      }
-                    >
-                      <option value="true">Sim</option>
-                      <option value="false">Não</option>
-                    </select>
-                  </label>
-
-                  <div className="admin-actions admin-form-grid__full">
-                    <button type="submit" className="btn-primary">
-                      {productForm.id ? "Salvar" : "Cadastrar"}
-                    </button>
-
-                    {productForm.id && (
-                      <>
-                        <button type="button" className="btn-ghost" onClick={handleNewProduct}>
-                          Limpar
-                        </button>
-                        <button type="button" className="btn-danger" onClick={handleDeleteProductClick}>
-                          Excluir
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </form>
-              </section>
-
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>Itens</h3>
-                  <span>{products.length} item(ns)</span>
-                </div>
-
-                <div className="admin-list">
-                  {products.map((product) => (
-                    <button
-                      key={product.id}
-                      type="button"
-                      className={`admin-list-item admin-list-item--button ${
-                        productForm.id === product.id ? "is-selected" : ""
-                      }`}
-                      onClick={() => handleEditProduct(product)}
-                    >
-                      <div className="admin-list-item__top">
-                        <strong>{product.name}</strong>
-                        <span className={`admin-tag ${product.available ? "is-success" : "is-danger"}`}>
-                          {product.available ? "Disponível" : "Indisponível"}
-                        </span>
-                      </div>
-
-                      <div className="admin-list-item__meta">
-                        {product.category} • {money(product.price)}
-                      </div>
-
-                      <div className="admin-list-item__note">{product.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </section>
-        )}
-
-        {activePage === "pedidos" && (
-          <section className="admin-page">
-            <div className="admin-section-hero">
-              <h2>Pedidos</h2>
-              <p>Lançamento e acompanhamento.</p>
-            </div>
-
-            <div className="admin-grid admin-grid--two">
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>Novo pedido</h3>
-                  <span>Atualiza pontos do cliente</span>
-                </div>
-
-                <form className="admin-form-grid" onSubmit={handleOrderSubmit}>
-                  <label>
-                    Cliente
-                    <select value={orderForm.customerId} onChange={(e) => setOrderForm((prev) => ({ ...prev, customerId: e.target.value }))}>
-                      <option value="">Selecione</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label>
-                    Produto
-                    <select value={orderForm.productId} onChange={(e) => setOrderForm((prev) => ({ ...prev, productId: e.target.value }))}>
-                      <option value="">Selecione</option>
-                      {products.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label>
-                    Canal
-                    <select value={orderForm.channel} onChange={(e) => setOrderForm((prev) => ({ ...prev, channel: e.target.value }))}>
-                      <option>Balcão</option>
-                      <option>Retirada</option>
-                      <option>Delivery</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Status
-                    <select value={orderForm.status} onChange={(e) => setOrderForm((prev) => ({ ...prev, status: e.target.value }))}>
-                      <option>Recebido</option>
-                      <option>Em preparo</option>
-                      <option>Pronto</option>
-                      <option>Saiu para entrega</option>
-                      <option>Entregue</option>
-                      <option>Cancelado</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Valor total
-                    <input type="text" value={orderForm.total} onChange={(e) => setOrderForm((prev) => ({ ...prev, total: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    Observação
-                    <input type="text" value={orderForm.note} onChange={(e) => setOrderForm((prev) => ({ ...prev, note: e.target.value }))} />
-                  </label>
-
-                  <div className="admin-actions admin-form-grid__full">
-                    <button type="submit" className="btn-primary">
-                      Salvar pedido
-                    </button>
-                  </div>
-                </form>
-              </section>
-
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>Pedidos</h3>
-                  <span>{orders.length} registro(s)</span>
-                </div>
-
-                <div className="admin-list">
-                  {orders.map((order) => (
-                    <article key={order.id} className="admin-list-item">
-                      <div className="admin-list-item__top">
-                        <strong>{order.customerName}</strong>
-                        <span className={`admin-tag ${statusClass(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </div>
-
-                      <div className="admin-list-item__meta">
-                        {order.productName} • {order.channel} • {money(order.total)}
-                      </div>
-
-                      <div className="admin-list-item__note">{order.note}</div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </section>
-        )}
-
-        {activePage === "fidelidade" && (
-          <section className="admin-page">
-            <div className="admin-section-hero">
-              <h2>Fidelidade</h2>
-              <p>Regras do programa.</p>
-            </div>
-
-            <div className="admin-grid admin-grid--two">
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>Regras</h3>
-                  <span>Configuração atual</span>
-                </div>
-
-                <div className="admin-summary">
-                  <div className="admin-summary-item">
-                    Cada R$ 1,00 gera <strong>{config.pointsPerReal}</strong> pontos.
-                  </div>
-                  <div className="admin-summary-item">
-                    Meta atual: <strong>{money(config.spendGoal)}</strong>.
-                  </div>
-                  <div className="admin-summary-item">
-                    Check-in: <strong>{config.checkinPercent}%</strong>.
-                  </div>
-                </div>
-              </section>
-
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>Bônus manual</h3>
-                  <span>Pontos extras</span>
-                </div>
-
-                <form className="admin-form-grid" onSubmit={handleBonusSubmit}>
-                  <label>
-                    Cliente
-                    <select value={bonusForm.customerId} onChange={(e) => setBonusForm((prev) => ({ ...prev, customerId: e.target.value }))}>
-                      <option value="">Selecione</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label>
-                    Pontos
-                    <input type="text" value={bonusForm.points} onChange={(e) => setBonusForm((prev) => ({ ...prev, points: e.target.value }))} />
-                  </label>
-
-                  <div className="admin-actions admin-form-grid__full">
-                    <button type="submit" className="btn-secondary">
-                      Adicionar pontos
-                    </button>
-                  </div>
-                </form>
-              </section>
-            </div>
-          </section>
-        )}
-
-        {activePage === "promocoes" && (
-          <section className="admin-page">
-            <div className="admin-section-hero">
-              <div>
-                <h2>Promoções</h2>
-                <p>Campanhas e destaque da loja.</p>
-              </div>
-
-              <div className="admin-actions">
-                <button type="button" className="btn-secondary" onClick={handleNewPromo}>
-                  Nova promoção
-                </button>
-              </div>
-            </div>
-
-            <div className="admin-grid admin-grid--two">
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>{promoForm.id ? "Editar promoção" : "Nova promoção"}</h3>
-                  <span>{promoForm.id ? "Promoção selecionada" : "Preencha os dados"}</span>
-                </div>
-
-                <form className="admin-form-grid" onSubmit={handlePromoSubmit}>
-                  <label>
-                    Título
-                    <input type="text" value={promoForm.title} onChange={(e) => setPromoForm((prev) => ({ ...prev, title: e.target.value }))} />
-                  </label>
-
-                  <label>
-                    Tipo
-                    <select value={promoForm.type} onChange={(e) => setPromoForm((prev) => ({ ...prev, type: e.target.value }))}>
-                      <option>Happy Hour</option>
-                      <option>Produto da semana</option>
-                      <option>Combo</option>
-                      <option>Aniversário</option>
-                    </select>
-                  </label>
-
-                  <label className="admin-form-grid__full">
-                    Descrição
-                    <textarea value={promoForm.description} onChange={(e) => setPromoForm((prev) => ({ ...prev, description: e.target.value }))} />
-                  </label>
-
-                  <label className="admin-form-grid__full">
-                    Imagem (opcional)
-                    <input type="text" value={promoForm.image} onChange={(e) => setPromoForm((prev) => ({ ...prev, image: e.target.value }))} placeholder="URL" />
-                  </label>
-
-                  <div className="admin-actions admin-form-grid__full">
-                    <button type="submit" className="btn-primary">
-                      {promoForm.id ? "Salvar" : "Cadastrar"}
-                    </button>
-
-                    {promoForm.id && (
-                      <>
-                        <button type="button" className="btn-ghost" onClick={handleNewPromo}>
-                          Limpar
-                        </button>
-                        <button type="button" className="btn-danger" onClick={handleDeletePromoClick}>
-                          Excluir
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </form>
-              </section>
-
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>Campanhas</h3>
-                  <span>{promos.length} item(ns)</span>
-                </div>
-
-                <div className="admin-list">
-                  {promos.map((promo) => (
-                    <button
-                      key={promo.id}
-                      type="button"
-                      className={`admin-list-item admin-list-item--button ${
-                        promoForm.id === promo.id ? "is-selected" : ""
-                      }`}
-                      onClick={() => handleEditPromo(promo)}
-                    >
-                      <div className="admin-list-item__top">
-                        <strong>{promo.title}</strong>
-                        <span className="admin-tag is-warning">{promo.type}</span>
-                      </div>
-
-                      <div className="admin-list-item__note">{promo.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </section>
-        )}
-
-        {activePage === "configuracoes" && (
-          <section className="admin-page">
-            <div className="admin-section-hero">
-              <h2>Configurações</h2>
-              <p>White-label, regras e equipe.</p>
-            </div>
-
-            <div className="admin-grid admin-grid--two">
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>Marca e regras</h3>
-                  <span>Personalização da empresa</span>
-                </div>
-
-                <form className="admin-form-grid" onSubmit={handleConfigSubmit}>
-                  <label>
-                    Nome do software
-                    <input
-                      type="text"
-                      value={configForm.softwareName}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, softwareName: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    Nome da empresa
-                    <input
-                      type="text"
-                      value={configForm.companyName}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, companyName: e.target.value }))}
-                    />
-                  </label>
-
-                  <label className="admin-form-grid__full">
-                    URL da logo
-                    <input
-                      type="text"
-                      value={configForm.logoUrl}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, logoUrl: e.target.value }))}
-                      placeholder="https://..."
-                    />
-                  </label>
-
-                  <label className="admin-form-grid__full">
-                    Frase curta da tela inicial
-                    <input
-                      type="text"
-                      value={configForm.welcomePhrase}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, welcomePhrase: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    Instagram
-                    <input
-                      type="text"
-                      value={configForm.instagramUrl}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, instagramUrl: e.target.value }))}
-                      placeholder="https://instagram.com/..."
-                    />
-                  </label>
-
-                  <label>
-                    WhatsApp
-                    <input
-                      type="text"
-                      value={configForm.whatsappNumber}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, whatsappNumber: e.target.value }))}
-                      placeholder="5511999999999"
-                    />
-                  </label>
-
-                  <label className="admin-form-grid__full">
-                    Mensagem do WhatsApp
-                    <input
-                      type="text"
-                      value={configForm.whatsappMessage}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, whatsappMessage: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    Pontos por real
-                    <input
-                      type="text"
-                      value={configForm.pointsPerReal}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, pointsPerReal: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    Meta de gasto
-                    <input
-                      type="text"
-                      value={configForm.spendGoal}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, spendGoal: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    % check-in
-                    <input
-                      type="text"
-                      value={configForm.checkinPercent}
-                      onChange={(e) => setConfigForm((prev) => ({ ...prev, checkinPercent: e.target.value }))}
-                    />
-                  </label>
-
-                  <div className="admin-actions admin-form-grid__full">
-                    <button type="submit" className="btn-primary">
-                      Salvar configurações
-                    </button>
-                  </div>
-                </form>
-              </section>
-
-              <section className="admin-card">
-                <div className="admin-card__header">
-                  <h3>{staffForm.id ? "Editar funcionário" : "Novo funcionário"}</h3>
-                  <span>{staffForm.id ? "Registro selecionado" : "Acesso da equipe"}</span>
-                </div>
-
-                <form className="admin-form-grid" onSubmit={handleStaffSubmit}>
-                  <label>
-                    Nome
-                    <input
-                      type="text"
-                      value={staffForm.name}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, name: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    E-mail
-                    <input
-                      type="text"
-                      value={staffForm.email}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, email: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    Login
-                    <input
-                      type="text"
-                      value={staffForm.login}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, login: e.target.value }))}
-                      placeholder="ex: caixa1"
-                    />
-                  </label>
-
-                  <label>
-                    @id
-                    <input
-                      type="text"
-                      value={staffForm.username}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, username: e.target.value }))}
-                      placeholder="@ana"
-                    />
-                  </label>
-
-                  <label>
-                    Matrícula
-                    <input
-                      type="text"
-                      value={staffForm.employeeId}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, employeeId: e.target.value }))}
-                      placeholder="001"
-                    />
-                  </label>
-
-                  <label>
-                    Telefone
-                    <input
-                      type="text"
-                      value={staffForm.phone}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, phone: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    Cargo
-                    <select
-                      value={staffForm.role}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, role: e.target.value }))}
-                    >
-                      <option>Administrador</option>
-                      <option>Gerente</option>
-                      <option>Atendente</option>
-                      <option>Caixa</option>
-                      <option>Funcionário</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Senha
-                    <input
-                      type="password"
-                      value={staffForm.password}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, password: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    PIN
-                    <input
-                      type="text"
-                      value={staffForm.pin}
-                      onChange={(e) => setStaffForm((prev) => ({ ...prev, pin: e.target.value }))}
-                    />
-                  </label>
-
-                  <label>
-                    Status
-                    <select
-                      value={staffForm.active ? "true" : "false"}
-                      onChange={(e) =>
-                        setStaffForm((prev) => ({
-                          ...prev,
-                          active: e.target.value === "true",
-                        }))
-                      }
-                    >
-                      <option value="true">Ativo</option>
-                      <option value="false">Inativo</option>
-                    </select>
-                  </label>
-
-                  <div className="admin-actions admin-form-grid__full">
-                    <button type="submit" className="btn-primary">
-                      {staffForm.id ? "Salvar funcionário" : "Cadastrar funcionário"}
-                    </button>
-
-                    <button type="button" className="btn-ghost" onClick={handleNewStaff}>
-                      Novo cadastro
-                    </button>
-
-                    {staffForm.id && (
-                      <button type="button" className="btn-danger" onClick={handleDeleteStaffClick}>
-                        Excluir
-                      </button>
-                    )}
-                  </div>
-                </form>
-
-                <div className="admin-list" style={{ marginTop: "18px" }}>
-                  {staffUsers.map((user) => (
-                    <button
-                      key={user.id}
-                      type="button"
-                      className={`admin-list-item admin-list-item--button ${
-                        selectedStaffId === user.id ? "is-selected" : ""
-                      }`}
-                      onClick={() => handleEditStaff(user)}
-                    >
-                      <div className="admin-list-item__top">
-                        <strong>{user.name}</strong>
-                        <span className={`admin-tag ${user.active ? "is-success" : "is-danger"}`}>
-                          {user.active ? "Ativo" : "Inativo"}
-                        </span>
-                      </div>
-
-                      <div className="admin-list-item__meta">
-                        {user.username || user.login || user.employeeId || "sem identificador"}
-                      </div>
-
-                      <div className="admin-list-item__note">
-                        {user.role} • {user.phone || user.email || "sem contato"}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </section>
-        )}
+      <main style={styles.main}>
+        {notice.text ? (
+          <div
+            style={{
+              ...styles.notice,
+              background: notice.type === "error" ? "#fff0f4" : "#edf8f1",
+              borderColor: notice.type === "error" ? "#f2cada" : "#cfe9d8",
+              color: notice.type === "error" ? danger : success,
+            }}
+          >
+            {notice.text}
+          </div>
+        ) : null}
+
+        {renderActiveTab()}
       </main>
     </div>
   );
 }
+
+function Card({ children }) {
+  return <section style={styles.card}>{children}</section>;
+}
+
+function Field({ label, children, full = false }) {
+  return (
+    <label style={{ ...styles.field, ...(full ? styles.fieldFull : {}) }}>
+      <span style={styles.label}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function StatCard({ label, value, helper, highlight = false }) {
+  return (
+    <div
+      style={{
+        ...styles.statCard,
+        ...(highlight
+          ? {
+              background: "linear-gradient(135deg, #6f3cc3 0%, #8d67d6 100%)",
+              color: white,
+              borderColor: "transparent",
+            }
+          : {}),
+      }}
+    >
+      <p style={{ ...styles.statLabel, ...(highlight ? { color: "rgba(255,255,255,0.82)" } : {}) }}>
+        {label}
+      </p>
+      <strong style={styles.statValue}>{value}</strong>
+      <p style={{ ...styles.statHelper, ...(highlight ? { color: "rgba(255,255,255,0.76)" } : {}) }}>
+        {helper}
+      </p>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{String(value ?? "-")}</strong>
+    </div>
+  );
+}
+
+function EmptyState({ text }) {
+  return <div style={styles.emptyState}>{text}</div>;
+}
+
+function QuickActionButton({ label, onClick }) {
+  return (
+    <button type="button" style={styles.quickButton} onClick={onClick}>
+      {label}
+    </button>
+  );
+}
+
+function formatCurrency(value) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function formatDate(value, withTime = false) {
+  if (!value) return "-";
+
+  try {
+    return new Date(value).toLocaleString("pt-BR", {
+      dateStyle: "short",
+      ...(withTime ? { timeStyle: "short" } : {}),
+    });
+  } catch {
+    return "-";
+  }
+}
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    display: "grid",
+    gridTemplateColumns: "290px 1fr",
+    background: bg,
+    color: ink,
+  },
+
+  sidebar: {
+    background: "linear-gradient(180deg, #2f1c46 0%, #3e255d 100%)",
+    color: white,
+    padding: 24,
+    display: "flex",
+    flexDirection: "column",
+    gap: 24,
+    borderRight: "1px solid rgba(255,255,255,0.08)",
+  },
+
+  brandBlock: {
+    display: "flex",
+    gap: 14,
+    alignItems: "flex-start",
+  },
+
+  logoBubble: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    background: "rgba(255,255,255,0.14)",
+    display: "grid",
+    placeItems: "center",
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+
+  logoImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+
+  logoFallback: {
+    fontSize: 22,
+    fontWeight: 900,
+    color: white,
+  },
+
+  eyebrow: {
+    margin: 0,
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
+    color: "rgba(255,255,255,0.68)",
+  },
+
+  brandTitle: {
+    margin: "4px 0 6px",
+    fontSize: 22,
+    lineHeight: 1.1,
+  },
+
+  brandSubtitle: {
+    margin: 0,
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 13,
+    lineHeight: 1.5,
+  },
+
+  nav: {
+    display: "grid",
+    gap: 8,
+  },
+
+  navButton: {
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "transparent",
+    color: "rgba(255,255,255,0.86)",
+    borderRadius: 16,
+    padding: "14px 16px",
+    textAlign: "left",
+    fontWeight: 700,
+    cursor: "pointer",
+    transition: "0.2s ease",
+  },
+
+  navButtonActive: {
+    background: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.18)",
+    color: white,
+  },
+
+  sidebarFooter: {
+    marginTop: "auto",
+    display: "grid",
+    gap: 10,
+  },
+
+  main: {
+    padding: 28,
+    display: "grid",
+    gap: 18,
+    alignContent: "start",
+  },
+
+  notice: {
+    border: "1px solid",
+    borderRadius: 16,
+    padding: "14px 16px",
+    fontWeight: 700,
+  },
+
+  stack: {
+    display: "grid",
+    gap: 18,
+  },
+
+  sectionHeading: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  sectionTitle: {
+    margin: 0,
+    fontSize: 28,
+    color: ink,
+  },
+
+  sectionSubtitle: {
+    margin: "6px 0 0",
+    color: muted,
+    fontSize: 15,
+  },
+
+  statsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 14,
+  },
+
+  statCard: {
+    background: white,
+    border: `1px solid ${border}`,
+    borderRadius: 22,
+    padding: 18,
+    boxShadow: "0 18px 42px rgba(90, 54, 119, 0.08)",
+  },
+
+  statLabel: {
+    margin: 0,
+    color: muted,
+    fontSize: 13,
+    fontWeight: 700,
+  },
+
+  statValue: {
+    display: "block",
+    marginTop: 10,
+    fontSize: 28,
+    lineHeight: 1.1,
+  },
+
+  statHelper: {
+    margin: "8px 0 0",
+    color: muted,
+    fontSize: 13,
+  },
+
+  twoCols: {
+    display: "grid",
+    gridTemplateColumns: "1.1fr 0.9fr",
+    gap: 18,
+  },
+
+  card: {
+    background: white,
+    border: `1px solid ${border}`,
+    borderRadius: 24,
+    padding: 22,
+    boxShadow: "0 18px 42px rgba(90, 54, 119, 0.08)",
+  },
+
+  cardTitle: {
+    margin: "0 0 16px",
+    fontSize: 20,
+    color: ink,
+  },
+
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+  },
+
+  field: {
+    display: "grid",
+    gap: 8,
+  },
+
+  fieldFull: {
+    gridColumn: "1 / -1",
+  },
+
+  label: {
+    fontSize: 13,
+    color: muted,
+    fontWeight: 700,
+  },
+
+  input: {
+    width: "100%",
+    border: `1px solid ${border}`,
+    borderRadius: 14,
+    padding: "12px 14px",
+    background: "#fcfbfe",
+    color: ink,
+    outline: "none",
+    fontSize: 14,
+  },
+
+  textarea: {
+    width: "100%",
+    minHeight: 96,
+    resize: "vertical",
+    border: `1px solid ${border}`,
+    borderRadius: 14,
+    padding: "12px 14px",
+    background: "#fcfbfe",
+    color: ink,
+    outline: "none",
+    fontSize: 14,
+    fontFamily: "inherit",
+  },
+
+  actionsRowFull: {
+    gridColumn: "1 / -1",
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    marginTop: 4,
+  },
+
+  primaryButton: {
+    border: 0,
+    borderRadius: 14,
+    padding: "12px 18px",
+    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
+    color: white,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
+  primaryButtonWide: {
+    border: 0,
+    borderRadius: 14,
+    padding: "12px 18px",
+    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
+    color: white,
+    fontWeight: 800,
+    cursor: "pointer",
+    width: "100%",
+  },
+
+  secondaryButton: {
+    border: `1px solid ${border}`,
+    borderRadius: 14,
+    padding: "12px 18px",
+    background: "#faf7fe",
+    color: ink,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  secondaryButtonWide: {
+    border: "1px solid rgba(255,255,255,0.16)",
+    borderRadius: 14,
+    padding: "12px 18px",
+    background: "rgba(255,255,255,0.06)",
+    color: white,
+    fontWeight: 700,
+    cursor: "pointer",
+    width: "100%",
+  },
+
+  ghostButton: {
+    border: `1px solid ${border}`,
+    borderRadius: 12,
+    padding: "9px 12px",
+    background: white,
+    color: ink,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  dangerButton: {
+    border: 0,
+    borderRadius: 12,
+    padding: "9px 12px",
+    background: "#fff1f4",
+    color: danger,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
+  linkButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    padding: "12px 18px",
+    background: "#edf6ff",
+    color: "#2461b1",
+    fontWeight: 800,
+    textDecoration: "none",
+  },
+
+  listHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+
+  miniBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    padding: "8px 12px",
+    background: "#f3ecfb",
+    color: accentDark,
+    fontSize: 12,
+    fontWeight: 800,
+  },
+
+  tableWrap: {
+    overflowX: "auto",
+  },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+
+  th: {
+    textAlign: "left",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    color: muted,
+    padding: "14px 12px",
+    borderBottom: `1px solid ${border}`,
+  },
+
+  td: {
+    padding: "14px 12px",
+    borderBottom: "1px solid #f1ebf8",
+    verticalAlign: "top",
+    fontSize: 14,
+    color: ink,
+  },
+
+  selectedRow: {
+    background: "#faf7fe",
+  },
+
+  inlineActions: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+
+  infoList: {
+    display: "grid",
+    gap: 12,
+  },
+
+  infoRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    alignItems: "center",
+    borderBottom: "1px solid #f1ebf8",
+    paddingBottom: 10,
+  },
+
+  infoLabel: {
+    color: muted,
+    fontSize: 14,
+  },
+
+  infoValue: {
+    color: ink,
+    fontSize: 14,
+    textAlign: "right",
+  },
+
+  emptyState: {
+    border: `1px dashed ${border}`,
+    borderRadius: 18,
+    padding: 22,
+    textAlign: "center",
+    color: muted,
+    background: "#fcfbfe",
+  },
+
+  quickActions: {
+    display: "grid",
+    gap: 10,
+  },
+
+  quickButton: {
+    border: `1px solid ${border}`,
+    borderRadius: 16,
+    padding: "14px 16px",
+    background: "#faf7fe",
+    color: ink,
+    fontWeight: 800,
+    textAlign: "left",
+    cursor: "pointer",
+  },
+
+  promoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+    gap: 14,
+  },
+
+  promoCard: {
+    border: `1px solid ${border}`,
+    borderRadius: 20,
+    background: "#fcfbfe",
+    overflow: "hidden",
+  },
+
+  promoContent: {
+    padding: 18,
+    display: "grid",
+    gap: 12,
+  },
+
+  promoTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  promoTag: {
+    display: "inline-flex",
+    alignItems: "center",
+    borderRadius: 999,
+    padding: "7px 10px",
+    background: "#efe7fb",
+    color: accentDark,
+    fontSize: 12,
+    fontWeight: 800,
+  },
+
+  promoTitle: {
+    margin: 0,
+    fontSize: 18,
+    color: ink,
+  },
+
+  promoText: {
+    margin: 0,
+    color: muted,
+    fontSize: 14,
+    lineHeight: 1.6,
+  },
+
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    borderRadius: 999,
+    padding: "8px 10px",
+    fontSize: 12,
+    fontWeight: 800,
+  },
+
+  checkinList: {
+    display: "grid",
+    gap: 14,
+  },
+
+  checkinCard: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
+    border: `1px solid ${border}`,
+    borderRadius: 18,
+    padding: 18,
+    background: "#fcfbfe",
+  },
+
+  checkinName: {
+    fontSize: 16,
+    color: ink,
+  },
+
+  checkinMeta: {
+    margin: "6px 0 0",
+    color: muted,
+    fontSize: 14,
+  },
+
+  teamList: {
+    display: "grid",
+    gap: 12,
+  },
+
+  teamCard: {
+    border: `1px solid ${border}`,
+    borderRadius: 18,
+    background: "#fcfbfe",
+    padding: 16,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  teamName: {
+    fontSize: 16,
+    color: ink,
+  },
+
+  teamMeta: {
+    margin: "5px 0 0",
+    color: muted,
+    fontSize: 14,
+  },
+};
