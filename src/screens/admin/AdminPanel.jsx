@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import "./AdminPanel.css";
 
 const accent = "#6f3cc3";
 const accentDark = "#4f2a93";

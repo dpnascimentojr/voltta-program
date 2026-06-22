@@ -1,508 +1,448 @@
-:root {
-  --accesshub-bg: #f7f2ff;
-  --accesshub-bg-2: #eee6fb;
-  --accesshub-surface: rgba(255, 255, 255, 0.97);
-  --accesshub-border: #e8dcf8;
-  --accesshub-text: #2f2340;
-  --accesshub-text-soft: #6e6280;
-  --accesshub-text-faint: #8e80a3;
-  --accesshub-primary: #6f3cc3;
-  --accesshub-primary-2: #4f2798;
-  --accesshub-hero-top: #241531;
-  --accesshub-hero-mid: #342047;
-  --accesshub-hero-bottom: #4d3170;
-  --accesshub-white: #ffffff;
-  --accesshub-danger-bg: #fff2f6;
-  --accesshub-danger-border: #f2cddb;
-  --accesshub-danger-text: #bf4168;
-  --accesshub-shadow-lg: 0 28px 60px rgba(95, 63, 141, 0.14);
-  --accesshub-shadow-button: 0 18px 34px rgba(111, 60, 195, 0.22);
-  --accesshub-radius-xl: 34px;
-  --accesshub-radius-lg: 22px;
-  --accesshub-radius-md: 18px;
-  --accesshub-radius-sm: 14px;
-  --accesshub-transition: 180ms ease;
-}
-
-* {
+.access-page,
+.access-page * {
   box-sizing: border-box;
 }
 
-.accesshub-page {
+.access-page {
+  --voltta-bg: #f4f5fb;
+  --voltta-bg-2: #eef2fb;
+  --voltta-surface: rgba(255, 255, 255, 0.86);
+  --voltta-surface-strong: rgba(255, 255, 255, 0.95);
+  --voltta-border: #dbe3f3;
+  --voltta-border-strong: #cfdaf0;
+  --voltta-text: #1f2940;
+  --voltta-muted: #69758d;
+  --voltta-purple: #6a45b8;
+  --voltta-blue: #2f7edb;
+  --voltta-green: #27a47f;
+  --voltta-primary-gradient: linear-gradient(135deg, var(--voltta-purple) 0%, var(--voltta-blue) 100%);
+  --voltta-hero-gradient: linear-gradient(145deg, rgba(106, 69, 184, 0.96) 0%, rgba(47, 126, 219, 0.94) 58%, rgba(39, 164, 127, 0.9) 100%);
+  --voltta-soft-gradient: linear-gradient(135deg, rgba(106, 69, 184, 0.12), rgba(47, 126, 219, 0.08) 58%, rgba(39, 164, 127, 0.08) 100%);
+  --voltta-soft-surface-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.92));
+  --voltta-shadow: 0 24px 54px rgba(44, 63, 97, 0.13);
+  --voltta-shadow-soft: 0 12px 28px rgba(62, 85, 124, 0.09);
+  --voltta-radius-xl: 30px;
+  --voltta-radius-lg: 24px;
+  --voltta-radius-md: 18px;
+  --voltta-radius-sm: 14px;
+  --voltta-transition: 180ms ease;
+
   min-height: 100vh;
-  width: 100%;
-  padding: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 28px;
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0) 24%),
-    radial-gradient(circle at bottom right, rgba(209, 190, 243, 0.34) 0%, rgba(209, 190, 243, 0) 32%),
-    linear-gradient(180deg, var(--accesshub-bg) 0%, var(--accesshub-bg-2) 100%);
+    radial-gradient(circle at bottom right, rgba(74, 149, 232, 0.1) 0%, rgba(74, 149, 232, 0) 28%),
+    radial-gradient(circle at 18% 82%, rgba(106, 69, 184, 0.08) 0%, rgba(106, 69, 184, 0) 28%),
+    linear-gradient(180deg, var(--voltta-bg) 0%, var(--voltta-bg-2) 100%);
+  color: var(--voltta-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.accesshub-shell {
-  width: min(1220px, 100%);
+.access-shell {
+  width: min(1120px, 100%);
+}
+
+.access-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+  gap: 22px;
   align-items: stretch;
 }
 
-.accesshub-login-card,
-.accesshub-hero-card {
+.access-panel,
+.access-hero {
+  border: 1px solid var(--voltta-border);
+  border-radius: var(--voltta-radius-xl);
+  box-shadow: var(--voltta-shadow);
   min-width: 0;
-  border-radius: var(--accesshub-radius-xl);
 }
 
-.accesshub-login-card {
-  background: var(--accesshub-surface);
-  border: 1px solid rgba(111, 60, 195, 0.08);
-  box-shadow: var(--accesshub-shadow-lg);
-  padding: 34px 30px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 720px;
+.access-panel {
+  background: var(--voltta-soft-surface-gradient);
+  padding: 28px;
+  display: grid;
+  gap: 22px;
 }
 
-.accesshub-login-head {
+.access-panel__top {
+  display: grid;
+  gap: 18px;
+}
+
+.access-brand {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  margin-bottom: 18px;
+  gap: 16px;
+  min-width: 0;
 }
 
-.accesshub-logo {
-  display: block;
-  width: min(170px, 48vw);
-  max-width: 100%;
+.access-brand__mark {
+  width: 92px;
+  height: 92px;
+  border-radius: 28px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--voltta-soft-gradient);
+  border: 1px solid rgba(106, 69, 184, 0.08);
+  box-shadow: var(--voltta-shadow-soft);
+}
+
+.access-brand__mark img {
+  width: 82%;
   height: auto;
   object-fit: contain;
 }
 
-.accesshub-heading {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 18px;
+.access-brand__copy {
+  min-width: 0;
 }
 
-.accesshub-eyebrow {
-  margin: 0;
-  color: #8b74b4;
-  font-size: 0.79rem;
-  line-height: 1;
+.access-eyebrow {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(47, 126, 219, 0.09);
+  color: var(--voltta-blue);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-weight: 800;
 }
 
-.accesshub-heading h1 {
+.access-brand__copy h1 {
+  margin: 0 0 8px;
+  color: var(--voltta-text);
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.access-brand__copy p {
   margin: 0;
-  color: var(--accesshub-text);
-  font-size: clamp(2rem, 3.8vw, 3.3rem);
-  line-height: 0.98;
-  letter-spacing: -0.05em;
+  color: var(--voltta-muted);
+  line-height: 1.7;
+  font-size: 0.98rem;
+  max-width: 44ch;
+}
+
+.access-switch {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px;
+  gap: 6px;
+  border-radius: 999px;
+  background: rgba(236, 242, 252, 0.94);
+  border: 1px solid var(--voltta-border);
+}
+
+.access-switch__button {
+  border: 0;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--voltta-muted);
   font-weight: 800;
+  cursor: pointer;
+  transition:
+    background var(--voltta-transition),
+    color var(--voltta-transition),
+    transform var(--voltta-transition),
+    box-shadow var(--voltta-transition);
 }
 
-.accesshub-subtitle {
+.access-switch__button.is-active {
+  background: #ffffff;
+  color: var(--voltta-text);
+  box-shadow: 0 10px 20px rgba(59, 82, 118, 0.1);
+}
+
+.access-card {
+  border: 1px solid var(--voltta-border);
+  border-radius: var(--voltta-radius-lg);
+  background: rgba(255, 255, 255, 0.74);
+  padding: 22px;
+  box-shadow: var(--voltta-shadow-soft);
+}
+
+.access-card__badge {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(106, 69, 184, 0.1);
+  color: var(--voltta-purple);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.access-card h2 {
+  margin: 0 0 8px;
+  color: var(--voltta-text);
+  font-size: 1.35rem;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.access-card > p {
   margin: 0;
-  max-width: 33rem;
-  color: var(--accesshub-text-soft);
-  font-size: 1rem;
-  line-height: 1.55;
+  color: var(--voltta-muted);
+  line-height: 1.65;
+  font-size: 0.96rem;
 }
 
-.accesshub-form {
+.access-form {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+  margin-top: 18px;
 }
 
-.accesshub-field {
+.access-field {
   display: grid;
   gap: 8px;
 }
 
-.accesshub-field span {
-  color: var(--accesshub-text-soft);
-  font-size: 0.95rem;
+.access-field label {
+  color: var(--voltta-text);
+  font-size: 0.92rem;
   font-weight: 700;
 }
 
-.accesshub-field input {
+.access-field input {
   width: 100%;
-  min-width: 0;
-  height: 58px;
-  border-radius: 18px;
-  border: 1px solid var(--accesshub-border);
-  background: #fbf9ff;
-  color: var(--accesshub-text);
-  padding: 0 16px;
-  font-size: 1rem;
-  font-weight: 600;
+  border: 1px solid var(--voltta-border-strong);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  padding: 14px 16px;
+  color: var(--voltta-text);
+  font-size: 0.96rem;
   outline: none;
   transition:
-    border-color var(--accesshub-transition),
-    box-shadow var(--accesshub-transition),
-    background var(--accesshub-transition);
+    border-color var(--voltta-transition),
+    box-shadow var(--voltta-transition),
+    background var(--voltta-transition);
 }
 
-.accesshub-field input::placeholder {
-  color: #a293b7;
-  font-weight: 500;
-}
-
-.accesshub-field input:focus {
-  border-color: rgba(111, 60, 195, 0.32);
+.access-field input:focus {
+  border-color: rgba(47, 126, 219, 0.42);
+  box-shadow: 0 0 0 4px rgba(47, 126, 219, 0.12);
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(111, 60, 195, 0.08);
 }
 
-.accesshub-actions {
-  display: grid;
+.access-feedback {
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.access-feedback--error {
+  background: #fff4f7;
+  border: 1px solid #f1cad5;
+  color: #ad4d68;
+}
+
+.access-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
-.accesshub-button {
-  width: 100%;
-  min-height: 54px;
-  border: none;
-  border-radius: 18px;
-  padding: 14px 16px;
-  font-size: 1rem;
-  line-height: 1.2;
+.access-btn {
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 18px;
   font-weight: 800;
   cursor: pointer;
   transition:
-    transform var(--accesshub-transition),
-    filter var(--accesshub-transition),
-    box-shadow var(--accesshub-transition),
-    background var(--accesshub-transition),
-    border-color var(--accesshub-transition);
+    transform var(--voltta-transition),
+    filter var(--voltta-transition),
+    box-shadow var(--voltta-transition),
+    opacity var(--voltta-transition);
 }
 
-.accesshub-button:disabled {
-  opacity: 0.72;
-  cursor: not-allowed;
-  transform: none;
+.access-btn--primary {
+  flex: 1;
+  background: var(--voltta-primary-gradient);
+  color: #ffffff;
+  box-shadow: 0 14px 24px rgba(58, 92, 160, 0.18);
 }
 
-.accesshub-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.01);
+.access-btn--ghost {
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--voltta-blue);
+  border: 1px solid var(--voltta-border-strong);
 }
 
-.accesshub-button--primary {
-  color: var(--accesshub-white);
-  background: linear-gradient(135deg, var(--accesshub-primary) 0%, var(--accesshub-primary-2) 100%);
-  box-shadow: var(--accesshub-shadow-button);
-}
-
-.accesshub-button--secondary {
-  color: var(--accesshub-text);
-  background: #faf7ff;
-  border: 1px solid var(--accesshub-border);
-}
-
-.accesshub-button--ghost {
-  color: var(--accesshub-text);
-  background: transparent;
-  border: 1px solid var(--accesshub-border);
-}
-
-.accesshub-divider {
-  width: 100%;
-  height: 1px;
-  margin: 20px 0 18px;
-  background: linear-gradient(
-    90deg,
-    rgba(232, 220, 248, 0) 0%,
-    rgba(232, 220, 248, 1) 12%,
-    rgba(232, 220, 248, 1) 88%,
-    rgba(232, 220, 248, 0) 100%
-  );
-}
-
-.accesshub-store-entry {
-  display: grid;
-  gap: 12px;
-}
-
-.accesshub-store-label {
-  margin: 0;
-  color: var(--accesshub-text-faint);
-  font-size: 0.84rem;
-  line-height: 1.3;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 800;
-}
-
-.accesshub-error {
-  border: 1px solid var(--accesshub-danger-border);
-  background: var(--accesshub-danger-bg);
-  color: var(--accesshub-danger-text);
-  border-radius: 16px;
-  padding: 13px 14px;
-  font-size: 0.94rem;
-  line-height: 1.45;
-  font-weight: 700;
-}
-
-.accesshub-hero-card {
-  min-height: 720px;
-  padding: 42px 40px;
-  background: linear-gradient(
-    180deg,
-    var(--accesshub-hero-top) 0%,
-    var(--accesshub-hero-mid) 42%,
-    var(--accesshub-hero-bottom) 100%
-  );
-  color: var(--accesshub-white);
-  box-shadow: 0 30px 70px rgba(58, 33, 87, 0.22);
+.access-hero {
+  padding: 28px;
   display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 28%),
+    var(--voltta-hero-gradient);
+  color: #ffffff;
+  overflow: hidden;
+  position: relative;
+}
+
+.access-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -22% auto;
+  width: 260px;
+  height: 260px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 66%);
+  pointer-events: none;
+}
+
+.access-hero__content,
+.access-hero__footer {
+  position: relative;
+  z-index: 1;
+}
+
+.access-hero__badge {
+  display: inline-flex;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.access-hero h2 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.access-hero p {
+  margin: 0;
+  max-width: 34ch;
+  color: rgba(245, 249, 255, 0.88);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.access-inline-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.access-link-chip {
+  text-decoration: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-.accesshub-hero-inner {
-  width: 100%;
-  display: grid;
-  gap: 18px;
-  align-content: center;
-}
-
-.accesshub-hero-eyebrow {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 0.9rem;
-  line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(18, 28, 52, 0.22);
+  color: #ffffff;
   font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  transition:
+    transform var(--voltta-transition),
+    background var(--voltta-transition),
+    border-color var(--voltta-transition);
 }
 
-.accesshub-hero-title {
-  margin: 0;
-  max-width: 680px;
-  color: var(--accesshub-white);
-  font-size: clamp(2.4rem, 5.6vw, 4.8rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
-  font-weight: 800;
+.access-link-chip--success {
+  background: rgba(20, 90, 70, 0.3);
+  color: #ffffff;
 }
 
-.accesshub-hero-text {
-  margin: 0;
-  max-width: 28rem;
-  color: rgba(255, 255, 255, 0.84);
-  font-size: clamp(1rem, 1.9vw, 1.4rem);
-  line-height: 1.5;
+.access-link-chip:hover,
+.access-switch__button:hover,
+.access-btn:hover {
+  transform: translateY(-1px);
 }
 
-@media (max-width: 1100px) {
-  .accesshub-shell {
+.access-link-chip:hover {
+  background: rgba(18, 28, 52, 0.34);
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.access-link-chip--success:hover {
+  background: rgba(20, 90, 70, 0.42);
+}
+
+@media (max-width: 980px) {
+  .access-grid {
     grid-template-columns: 1fr;
   }
 
-  .accesshub-login-card,
-  .accesshub-hero-card {
-    min-height: auto;
+  .access-hero {
+    min-height: 300px;
   }
 
-  .accesshub-login-card {
-    order: 1;
-  }
-
-  .accesshub-hero-card {
-    order: 2;
-    padding: 34px 30px;
-  }
-
-  .accesshub-hero-title,
-  .accesshub-hero-text {
-    max-width: 100%;
+  .access-hero p {
+    max-width: 44ch;
   }
 }
 
-@media (max-width: 768px) {
-  .accesshub-page {
-    padding: 18px;
+@media (max-width: 680px) {
+  .access-page {
+    padding: 16px;
+  }
+
+  .access-panel,
+  .access-hero {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .access-brand {
     align-items: flex-start;
+    flex-direction: column;
   }
 
-  .accesshub-shell {
-    gap: 18px;
-  }
-
-  .accesshub-login-card,
-  .accesshub-hero-card {
-    border-radius: 28px;
-  }
-
-  .accesshub-login-card {
-    padding: 24px 20px;
-  }
-
-  .accesshub-logo {
-    width: min(146px, 42vw);
-  }
-
-  .accesshub-heading {
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-
-  .accesshub-subtitle {
-    font-size: 0.95rem;
-  }
-
-  .accesshub-field input {
-    height: 54px;
-    border-radius: 16px;
-    font-size: 0.98rem;
-  }
-
-  .accesshub-button {
-    min-height: 52px;
-    border-radius: 16px;
-    font-size: 0.96rem;
-  }
-
-  .accesshub-divider {
-    margin: 18px 0 16px;
-  }
-
-  .accesshub-hero-card {
-    padding: 28px 22px;
-  }
-
-  .accesshub-hero-inner {
-    gap: 14px;
-  }
-}
-
-@media (max-width: 520px) {
-  .accesshub-page {
-    padding: 12px;
-  }
-
-  .accesshub-shell {
-    gap: 14px;
-  }
-
-  .accesshub-login-card,
-  .accesshub-hero-card {
+  .access-brand__mark {
+    width: 78px;
+    height: 78px;
     border-radius: 22px;
   }
 
-  .accesshub-login-card {
-    padding: 18px 16px;
-  }
-
-  .accesshub-logo {
-    width: min(128px, 40vw);
-  }
-
-  .accesshub-eyebrow {
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-  }
-
-  .accesshub-heading h1 {
-    font-size: clamp(1.7rem, 8vw, 2.15rem);
-    line-height: 1;
-  }
-
-  .accesshub-subtitle {
-    font-size: 0.92rem;
-    line-height: 1.45;
-  }
-
-  .accesshub-form {
-    gap: 14px;
-  }
-
-  .accesshub-field span {
-    font-size: 0.88rem;
-  }
-
-  .accesshub-field input {
-    height: 50px;
-    padding: 0 14px;
-    font-size: 0.95rem;
-    border-radius: 14px;
-  }
-
-  .accesshub-actions {
-    gap: 10px;
-  }
-
-  .accesshub-button {
-    min-height: 48px;
-    padding: 12px 14px;
-    font-size: 0.93rem;
-    border-radius: 14px;
-  }
-
-  .accesshub-store-label {
-    font-size: 0.78rem;
-  }
-
-  .accesshub-error {
-    border-radius: 14px;
-    padding: 11px 12px;
-    font-size: 0.88rem;
-  }
-
-  .accesshub-hero-card {
-    padding: 22px 16px;
-  }
-
-  .accesshub-hero-eyebrow {
-    font-size: 0.76rem;
-  }
-
-  .accesshub-hero-title {
-    font-size: clamp(1.95rem, 10vw, 2.7rem);
-    line-height: 0.98;
-  }
-
-  .accesshub-hero-text {
-    font-size: 0.98rem;
-    line-height: 1.45;
-  }
-}
-
-@media (max-width: 380px) {
-  .accesshub-page {
-    padding: 10px;
-  }
-
-  .accesshub-login-card {
-    padding: 16px 14px;
-  }
-
-  .accesshub-hero-card {
-    padding: 20px 14px;
-  }
-
-  .accesshub-heading h1 {
-    font-size: 1.6rem;
-  }
-
-  .accesshub-field input {
-    height: 48px;
-  }
-
-  .accesshub-button {
-    min-height: 46px;
-    font-size: 0.9rem;
-  }
-
-  .accesshub-hero-title {
+  .access-brand__copy h1 {
     font-size: 1.85rem;
+  }
+
+  .access-card {
+    padding: 18px;
+  }
+
+  .access-actions {
+    flex-direction: column;
+  }
+
+  .access-btn--primary,
+  .access-btn--ghost {
+    width: 100%;
+  }
+
+  .access-hero h2 {
+    font-size: 1.95rem;
   }
 }

@@ -23,7 +23,8 @@ const initialConfig = {
   instagramUrl: "",
   whatsappNumber: "",
   whatsappMessage: "Olá! Vim pelo app da Voltta.",
-  welcomePhrase: "Programa de fidelidade, operação e relacionamento em uma experiência só.",
+  welcomePhrase:
+    "Programa de fidelidade, operação e relacionamento em uma experiência só.",
 };
 
 const initialCustomers = [
@@ -206,22 +207,48 @@ export default function App() {
     customers[0] ||
     null;
 
+  const branding = {
+    softwareName: config.softwareName || "Voltta",
+    companyName: config.companyName || "Voltta",
+    logoUrl: config.logoUrl || "",
+    instagramUrl: config.instagramUrl || "",
+    whatsappNumber: config.whatsappNumber || "",
+    whatsappMessage: config.whatsappMessage || "Olá! Vim pelo app da Voltta.",
+    welcomePhrase:
+      config.welcomePhrase ||
+      "Programa de fidelidade, operação e relacionamento em uma experiência só.",
+  };
+
   const customerWithPromos = selectedCustomer
     ? {
         ...selectedCustomer,
-        nextRewardAt: config.spendGoal || 250,
+        nextRewardAt: Number(config.spendGoal || 250),
         promotions: promos.map((promo) => promo.description),
       }
     : null;
 
   const customerProgress = useMemo(() => {
     if (!customerWithPromos) return 0;
-    const total = customerWithPromos.nextRewardAt || config.spendGoal || 250;
-    const current = customerWithPromos.points || 0;
+
+    const total = Number(customerWithPromos.nextRewardAt || config.spendGoal || 250);
+    const current = Number(customerWithPromos.totalSpent || 0);
+
+    if (!total) return 0;
+
     return Math.min((current / total) * 100, 100);
   }, [customerWithPromos, config]);
 
-  const handleEnterCustomer = () => setScreen("customer");
+  const whatsappLink = branding.whatsappNumber
+    ? `https://wa.me/${String(branding.whatsappNumber).replace(/\D/g, "")}?text=${encodeURIComponent(
+        branding.whatsappMessage || "Olá! Vim pelo app da Voltta."
+      )}`
+    : "";
+
+  const pendingCheckins = [];
+
+  const handleEnterCustomer = () => {
+    setScreen("customer");
+  };
 
   const handleBackToAccess = () => {
     setScreen("access");
@@ -315,11 +342,12 @@ export default function App() {
   };
 
   const handleDeleteCustomer = async (customerId) => {
+    const remaining = customers.filter((customer) => customer.id !== customerId);
+
     setCustomers((prev) => prev.filter((customer) => customer.id !== customerId));
     setOrders((prev) => prev.filter((order) => order.customerId !== customerId));
 
     if (selectedCustomerId === customerId) {
-      const remaining = customers.filter((customer) => customer.id !== customerId);
       setSelectedCustomerId(remaining[0]?.id || "");
     }
   };
@@ -557,6 +585,7 @@ export default function App() {
 
     setAdminAuth((prev) => {
       if (!prev.user || prev.user.id !== payload.id) return prev;
+
       return {
         ...prev,
         user: {
@@ -614,26 +643,6 @@ export default function App() {
     );
   };
 
-  const branding = {
-    softwareName: config.softwareName || "Voltta",
-    companyName: config.companyName || "Voltta",
-    logoUrl: config.logoUrl || "",
-    instagramUrl: config.instagramUrl || "",
-    whatsappNumber: config.whatsappNumber || "",
-    whatsappMessage: config.whatsappMessage || "Olá! Vim pelo app da Voltta.",
-    welcomePhrase:
-      config.welcomePhrase ||
-      "Programa de fidelidade, operação e relacionamento em uma experiência só.",
-  };
-
-  const whatsappLink = branding.whatsappNumber
-    ? `https://wa.me/${branding.whatsappNumber}?text=${encodeURIComponent(
-        branding.whatsappMessage || "Olá! Vim pelo app da Voltta."
-      )}`
-    : "";
-
-  const pendingCheckins = [];
-
   if (screen === "admin") {
     if (!adminAuth.isAuthenticated) {
       setScreen("access");
@@ -679,19 +688,14 @@ export default function App() {
 
   if (screen === "customer" && customerWithPromos) {
     return (
-      <div style={styles.appShell}>
-        <CustomerDashboard
-          customer={{
-            ...customerWithPromos,
-            nextRewardAt: config.spendGoal,
-          }}
-          progress={customerProgress}
-          onBack={handleBackToAccess}
-          onCheckin={handleCustomerCheckin}
-          branding={branding}
-          whatsappLink={whatsappLink}
-        />
-      </div>
+      <CustomerDashboard
+        customer={customerWithPromos}
+        progress={customerProgress}
+        onBack={handleBackToAccess}
+        onCheckin={handleCustomerCheckin}
+        branding={branding}
+        whatsappLink={whatsappLink}
+      />
     );
   }
 
