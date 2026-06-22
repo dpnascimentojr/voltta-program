@@ -4,36 +4,36 @@ import AccessHubScreen from "./screens/auth/AccessHubScreen";
 import CustomerDashboard from "./screens/customer/CustomerDashboard";
 
 const STORAGE_KEYS = {
-  config: "savana_config",
-  customers: "savana_customers",
-  products: "savana_products",
-  orders: "savana_orders",
-  promos: "savana_promos",
-  staffUsers: "savana_staff_users",
-  selectedCustomerId: "savana_selected_customer_id",
+  config: "voltta_config",
+  customers: "voltta_customers",
+  products: "voltta_products",
+  orders: "voltta_orders",
+  promos: "voltta_promos",
+  staffUsers: "voltta_staff_users",
+  selectedCustomerId: "voltta_selected_customer_id",
 };
 
 const initialConfig = {
   pointsPerReal: 10,
   spendGoal: 250,
   checkinPercent: 10,
-  softwareName: "Clube Base",
-  companyName: "Minha Loja",
+  softwareName: "Voltta",
+  companyName: "Voltta",
   logoUrl: "",
   instagramUrl: "",
   whatsappNumber: "",
-  whatsappMessage: "Olá! Vim pelo app.",
-  welcomePhrase: "Seu clube de pontos da loja.",
+  whatsappMessage: "Olá! Vim pelo app da Voltta.",
+  welcomePhrase: "Programa de fidelidade, operação e relacionamento em uma experiência só.",
 };
 
 const initialCustomers = [
   {
     id: "c1",
-    name: "Cliente Savana",
+    name: "Cliente Voltta",
     phone: "(75) 99999-0000",
     birth: "",
     pin: "1234",
-    email: "cliente@savana.com",
+    email: "cliente@voltta.com",
     address: "Centro",
     tier: "Bronze",
     points: 180,
@@ -44,7 +44,7 @@ const initialCustomers = [
       {
         id: "cp1",
         title: "10% no próximo pedido",
-        code: "BEMVINDO10",
+        code: "VOLTTA10",
         percent: 10,
         active: true,
       },
@@ -60,7 +60,7 @@ const initialCustomers = [
     history: [
       {
         id: "h1",
-        product: "Açaí 500 ml",
+        product: "Produto Voltta 01",
         amount: 18,
         date: new Date().toISOString(),
       },
@@ -71,18 +71,18 @@ const initialCustomers = [
 const initialProducts = [
   {
     id: "p1",
-    name: "Açaí 500 ml",
-    category: "Açaí",
+    name: "Produto Voltta 01",
+    category: "Principal",
     price: 18,
-    description: "Açaí tradicional com montagem livre.",
+    description: "Item inicial do catálogo para demonstração do app.",
     available: true,
   },
   {
     id: "p2",
-    name: "Copo 300 ml",
-    category: "Açaí",
+    name: "Produto Voltta 02",
+    category: "Principal",
     price: 14,
-    description: "Versão compacta para consumo rápido.",
+    description: "Segundo item de exemplo para a operação da loja.",
     available: true,
   },
 ];
@@ -91,13 +91,13 @@ const initialOrders = [
   {
     id: "o1",
     customerId: "c1",
-    customerName: "Cliente Savana",
+    customerName: "Cliente Voltta",
     productId: "p1",
-    productName: "Açaí 500 ml",
+    productName: "Produto Voltta 01",
     channel: "Balcão",
     status: "Recebido",
     total: 18,
-    note: "Sem banana",
+    note: "Pedido inicial de demonstração",
     createdAt: new Date().toISOString(),
   },
 ];
@@ -105,9 +105,9 @@ const initialOrders = [
 const initialPromos = [
   {
     id: "m1",
-    title: "Happy Hour Savana",
-    type: "Happy Hour",
-    description: "Desconto especial em horários selecionados.",
+    title: "Campanha Voltta",
+    type: "Destaque",
+    description: "Promoção inicial para apresentar campanhas dentro do app.",
     image: "",
   },
 ];
@@ -119,7 +119,7 @@ const initialStaffUsers = [
     login: "admin",
     role: "Administrador",
     password: "123456",
-    email: "admin@minhaloja.com",
+    email: "admin@voltta.com",
     phone: "(75) 99999-1111",
     cpf: "",
     status: "Ativo",
@@ -222,6 +222,7 @@ export default function App() {
   }, [customerWithPromos, config]);
 
   const handleEnterCustomer = () => setScreen("customer");
+
   const handleBackToAccess = () => {
     setScreen("access");
   };
@@ -235,9 +236,7 @@ export default function App() {
   };
 
   const handleAdminLogin = async ({ login, password }) => {
-    const normalizedLogin = String(login || "")
-      .trim()
-      .toLowerCase();
+    const normalizedLogin = String(login || "").trim().toLowerCase();
     const normalizedPassword = String(password || "").trim();
 
     if (!normalizedLogin || !normalizedPassword) {
@@ -245,9 +244,7 @@ export default function App() {
     }
 
     const foundUser = staffUsers.find((user) => {
-      const userLogin = String(user.login || "")
-        .trim()
-        .toLowerCase();
+      const userLogin = String(user.login || "").trim().toLowerCase();
       const userPassword = String(user.password || "").trim();
       const userStatus = String(user.status || "Ativo").trim().toLowerCase();
 
@@ -399,13 +396,15 @@ export default function App() {
       pointsPerReal: Number(payload.pointsPerReal || 10),
       spendGoal: Number(payload.spendGoal || 250),
       checkinPercent: Number(payload.checkinPercent || 10),
-      softwareName: payload.softwareName || prev.softwareName || "Clube Base",
-      companyName: payload.companyName || prev.companyName || "Minha Loja",
+      softwareName: payload.softwareName || prev.softwareName || "Voltta",
+      companyName: payload.companyName || prev.companyName || "Voltta",
       logoUrl: payload.logoUrl || "",
       instagramUrl: payload.instagramUrl || "",
       whatsappNumber: payload.whatsappNumber || "",
-      whatsappMessage: payload.whatsappMessage || "Olá! Vim pelo app.",
-      welcomePhrase: payload.welcomePhrase || "Seu clube de pontos da loja.",
+      whatsappMessage: payload.whatsappMessage || "Olá! Vim pelo app da Voltta.",
+      welcomePhrase:
+        payload.welcomePhrase ||
+        "Programa de fidelidade, operação e relacionamento em uma experiência só.",
     }));
   };
 
@@ -451,7 +450,8 @@ export default function App() {
         return {
           ...item,
           totalSpent: Number(item.totalSpent || 0) + total,
-          points: Number(item.points || 0) + total * Number(config.pointsPerReal || 10),
+          points:
+            Number(item.points || 0) + total * Number(config.pointsPerReal || 10),
           visits: Number(item.visits || 0) + 1,
           history: [
             {
@@ -615,18 +615,20 @@ export default function App() {
   };
 
   const branding = {
-    softwareName: config.softwareName || "Clube Base",
-    companyName: config.companyName || "Minha Loja",
+    softwareName: config.softwareName || "Voltta",
+    companyName: config.companyName || "Voltta",
     logoUrl: config.logoUrl || "",
     instagramUrl: config.instagramUrl || "",
     whatsappNumber: config.whatsappNumber || "",
-    whatsappMessage: config.whatsappMessage || "Olá! Vim pelo app.",
-    welcomePhrase: config.welcomePhrase || "Seu clube de pontos da loja.",
+    whatsappMessage: config.whatsappMessage || "Olá! Vim pelo app da Voltta.",
+    welcomePhrase:
+      config.welcomePhrase ||
+      "Programa de fidelidade, operação e relacionamento em uma experiência só.",
   };
 
   const whatsappLink = branding.whatsappNumber
     ? `https://wa.me/${branding.whatsappNumber}?text=${encodeURIComponent(
-        branding.whatsappMessage || "Olá! Vim pelo app."
+        branding.whatsappMessage || "Olá! Vim pelo app da Voltta."
       )}`
     : "";
 

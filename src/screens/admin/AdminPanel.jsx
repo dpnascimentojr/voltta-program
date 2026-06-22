@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 
 const accent = "#6f3cc3";
-const accentDark = "#522b93";
-const border = "#eadff7";
-const ink = "#2f2340";
-const muted = "#7b6d8d";
-const bg = "#f6f1fb";
+const accentDark = "#4f2a93";
+const accentSoft = "#f2ebff";
+const border = "#e9ddf6";
+const ink = "#261f35";
+const muted = "#746786";
+const bg = "#f6f3fb";
 const white = "#ffffff";
-const success = "#2f8f57";
+const success = "#238a57";
 const danger = "#cf4d6f";
-const warning = "#d38b1f";
+const warning = "#d48a1f";
 
 const tabs = [
   { id: "overview", label: "Visão geral" },
@@ -113,8 +114,11 @@ export default function AdminPanel({
   const [activeTab, setActiveTab] = useState("overview");
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState({ type: "", text: "" });
-  const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth < 1180 : false
+  const [isTablet, setIsTablet] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 1180 : false
+  );
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 820 : false
   );
 
   const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
@@ -143,7 +147,11 @@ export default function AdminPanel({
   });
 
   useEffect(() => {
-    const onResize = () => setIsNarrow(window.innerWidth < 1180);
+    const onResize = () => {
+      setIsTablet(window.innerWidth <= 1180);
+      setIsMobile(window.innerWidth <= 820);
+    };
+
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -153,6 +161,7 @@ export default function AdminPanel({
       ...prev,
       customerId: prev.customerId || selectedCustomerId || customers[0]?.id || "",
     }));
+
     setBonusForm((prev) => ({
       ...prev,
       customerId: prev.customerId || selectedCustomerId || customers[0]?.id || "",
@@ -160,7 +169,9 @@ export default function AdminPanel({
   }, [selectedCustomerId, customers]);
 
   const selectedCustomer =
-    customers.find((customer) => customer.id === selectedCustomerId) || customers[0] || null;
+    customers.find((customer) => customer.id === selectedCustomerId) ||
+    customers[0] ||
+    null;
 
   const stats = useMemo(() => {
     const totalRevenue = orders.reduce((sum, item) => sum + Number(item.total || 0), 0);
@@ -168,7 +179,9 @@ export default function AdminPanel({
     const totalCoupons = customers.reduce(
       (sum, item) =>
         sum +
-        (Array.isArray(item.coupons) ? item.coupons.filter((coupon) => coupon.active).length : 0),
+        (Array.isArray(item.coupons)
+          ? item.coupons.filter((coupon) => coupon.active).length
+          : 0),
       0
     );
 
@@ -506,7 +519,7 @@ export default function AdminPanel({
   function sectionTitle(title, subtitle) {
     return (
       <div style={styles.sectionHeading}>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h2 style={styles.sectionTitle}>{title}</h2>
           <p style={styles.sectionSubtitle}>{subtitle}</p>
         </div>
@@ -519,51 +532,89 @@ export default function AdminPanel({
       <div style={styles.stack}>
         {sectionTitle(
           "Painel da loja",
-          "Resumo da operação, atalhos e visão rápida dos principais números."
+          "Resumo da operação, marca da loja e visão rápida dos principais indicadores."
         )}
 
         <div
           style={{
+            ...styles.brandHero,
+            gridTemplateColumns: isTablet ? "1fr" : "1.2fr 0.8fr",
+          }}
+        >
+          <div style={styles.brandHeroCard}>
+            <div style={styles.brandHeroTop}>
+              <div style={styles.heroLogo}>
+                {branding.logoUrl ? (
+                  <img src={branding.logoUrl} alt="Logo da loja" style={styles.heroLogoImage} />
+                ) : (
+                  <span style={styles.heroLogoFallback}>
+                    {(branding.companyName || "L").slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <p style={styles.heroSoftwareName}>{branding.softwareName || "Clube Base"}</p>
+                <h3 style={styles.heroStoreName}>{branding.companyName || "Minha Loja"}</h3>
+                <p style={styles.heroStoreSlogan}>
+                  {branding.welcomePhrase || "Seu clube de pontos da loja."}
+                </p>
+              </div>
+            </div>
+
+            <div style={styles.heroBadges}>
+              <span style={styles.heroBadge}>Marca personalizável</span>
+              <span style={styles.heroBadge}>Logo da loja</span>
+              <span style={styles.heroBadge}>Experiência cliente + painel</span>
+            </div>
+          </div>
+
+          <div style={styles.brandSideCard}>
+            <p style={styles.sideMetaLabel}>Administrador atual</p>
+            <strong style={styles.sideMetaValue}>
+              {currentAdminUser?.name || "Sem usuário"}
+            </strong>
+
+            <div style={styles.sideMetaList}>
+              <InfoMini label="Login" value={currentAdminUser?.login || "-"} />
+              <InfoMini label="Perfil" value={currentAdminUser?.role || "-"} />
+              <InfoMini label="Status" value={currentAdminUser?.status || "Ativo"} />
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
             ...styles.statsGrid,
-            gridTemplateColumns: isNarrow
-              ? "repeat(auto-fit, minmax(180px, 1fr))"
-              : "repeat(auto-fit, minmax(210px, 1fr))",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : "repeat(auto-fit, minmax(190px, 1fr))",
           }}
         >
           <StatCard label="Clientes" value={stats.totalCustomers} helper="Base cadastrada" />
           <StatCard label="Produtos" value={stats.totalProducts} helper="Catálogo ativo" />
           <StatCard label="Promoções" value={stats.totalPromos} helper="Campanhas visíveis" />
           <StatCard label="Pedidos" value={stats.totalOrders} helper="Movimento total" />
-          <StatCard
-            label="Faturamento"
-            value={formatCurrency(stats.totalRevenue)}
-            helper="Soma dos pedidos"
-          />
+          <StatCard label="Faturamento" value={formatCurrency(stats.totalRevenue)} helper="Soma dos pedidos" />
           <StatCard label="Pontos" value={stats.totalPoints} helper="Saldo distribuído" />
-          <StatCard
-            label="Cupons ativos"
-            value={stats.totalCoupons}
-            helper="Clientes com benefício"
-          />
-          <StatCard
-            label="Equipe"
-            value={stats.totalTeam}
-            helper="Acessos cadastrados"
-          />
+          <StatCard label="Cupons ativos" value={stats.totalCoupons} helper="Clientes com benefício" />
+          <StatCard label="Equipe" value={stats.totalTeam} helper="Acessos cadastrados" />
         </div>
 
-        <div style={getTwoColsStyle(isNarrow)}>
+        <div style={getDualLayout(isTablet)}>
           <Card>
-            <h3 style={styles.cardTitle}>Usuário logado</h3>
-            {currentAdminUser ? (
+            <h3 style={styles.cardTitle}>Cliente em destaque</h3>
+            {selectedCustomer ? (
               <div style={styles.infoList}>
-                <InfoRow label="Nome" value={currentAdminUser.name} />
-                <InfoRow label="Login" value={currentAdminUser.login} />
-                <InfoRow label="Função" value={currentAdminUser.role} />
-                <InfoRow label="Status" value={currentAdminUser.status || "Ativo"} />
+                <InfoRow label="Nome" value={selectedCustomer.name} />
+                <InfoRow label="Telefone" value={selectedCustomer.phone || "-"} />
+                <InfoRow label="Pontos" value={selectedCustomer.points || 0} />
+                <InfoRow label="Gasto total" value={formatCurrency(selectedCustomer.totalSpent || 0)} />
+                <InfoRow label="Visitas" value={selectedCustomer.visits || 0} />
+                <InfoRow label="Nível" value={selectedCustomer.tier || "Bronze"} />
               </div>
             ) : (
-              <EmptyState text="Nenhum usuário autenticado no momento." />
+              <EmptyState text="Nenhum cliente selecionado no momento." />
             )}
           </Card>
 
@@ -573,7 +624,7 @@ export default function AdminPanel({
               <QuickActionButton label="Cadastrar cliente" onClick={() => setActiveTab("customers")} />
               <QuickActionButton label="Registrar pedido" onClick={() => setActiveTab("orders")} />
               <QuickActionButton label="Gerenciar equipe" onClick={() => setActiveTab("team")} />
-              <QuickActionButton label="Editar configurações" onClick={() => setActiveTab("settings")} />
+              <QuickActionButton label="Editar branding" onClick={() => setActiveTab("settings")} />
             </div>
           </Card>
         </div>
@@ -589,11 +640,13 @@ export default function AdminPanel({
           "Cadastre, edite, selecione e acompanhe a base de clientes da loja."
         )}
 
-        <div style={getTwoColsStyle(isNarrow)}>
+        <div style={getDualLayout(isTablet)}>
           <Card>
-            <h3 style={styles.cardTitle}>{customerForm.id ? "Editar cliente" : "Novo cliente"}</h3>
+            <h3 style={styles.cardTitle}>
+              {customerForm.id ? "Editar cliente" : "Novo cliente"}
+            </h3>
 
-            <form onSubmit={submitCustomer} style={getFormGridStyle(isNarrow)}>
+            <form onSubmit={submitCustomer} style={getFormGridStyle(isMobile)}>
               <Field label="Nome completo">
                 <input
                   style={styles.input}
@@ -678,7 +731,8 @@ export default function AdminPanel({
 
           <Card>
             <h3 style={styles.cardTitle}>Aplicar bônus</h3>
-            <form onSubmit={submitBonus} style={getFormGridStyle(isNarrow)}>
+
+            <form onSubmit={submitBonus} style={getFormGridStyle(true)}>
               <Field label="Cliente" full>
                 <select
                   style={styles.input}
@@ -794,11 +848,13 @@ export default function AdminPanel({
           "Organize o catálogo da loja com preço, categoria e disponibilidade."
         )}
 
-        <div style={getTwoColsStyle(isNarrow)}>
+        <div style={getDualLayout(isTablet)}>
           <Card>
-            <h3 style={styles.cardTitle}>{productForm.id ? "Editar produto" : "Novo produto"}</h3>
+            <h3 style={styles.cardTitle}>
+              {productForm.id ? "Editar produto" : "Novo produto"}
+            </h3>
 
-            <form onSubmit={submitProduct} style={getFormGridStyle(isNarrow)}>
+            <form onSubmit={submitProduct} style={getFormGridStyle(isMobile)}>
               <Field label="Nome">
                 <input
                   style={styles.input}
@@ -812,7 +868,9 @@ export default function AdminPanel({
                 <input
                   style={styles.input}
                   value={productForm.category}
-                  onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, category: e.target.value }))
+                  }
                   placeholder="Açaí"
                 />
               </Field>
@@ -922,7 +980,7 @@ export default function AdminPanel({
                         <span
                           style={{
                             ...styles.statusBadge,
-                            background: product.available ? "#ebf7ef" : "#fff3ea",
+                            background: product.available ? "#ebf7ef" : "#fff4ea",
                             color: product.available ? success : warning,
                           }}
                         >
@@ -969,14 +1027,16 @@ export default function AdminPanel({
       <div style={styles.stack}>
         {sectionTitle(
           "Promoções",
-          "Gerencie campanhas, textos promocionais e chamadas do cliente."
+          "Gerencie campanhas, banners internos e textos promocionais da loja."
         )}
 
-        <div style={getTwoColsStyle(isNarrow)}>
+        <div style={getDualLayout(isTablet)}>
           <Card>
-            <h3 style={styles.cardTitle}>{promoForm.id ? "Editar promoção" : "Nova promoção"}</h3>
+            <h3 style={styles.cardTitle}>
+              {promoForm.id ? "Editar promoção" : "Nova promoção"}
+            </h3>
 
-            <form onSubmit={submitPromo} style={getFormGridStyle(isNarrow)}>
+            <form onSubmit={submitPromo} style={getFormGridStyle(isMobile)}>
               <Field label="Título">
                 <input
                   style={styles.input}
@@ -1035,8 +1095,8 @@ export default function AdminPanel({
             <h3 style={styles.cardTitle}>Resumo promocional</h3>
             <div style={styles.infoList}>
               <InfoRow label="Promoções ativas" value={promos.length} />
-              <InfoRow label="Texto de boas-vindas" value={branding.welcomePhrase || "-"} />
-              <InfoRow label="Instagram atual" value={branding.instagramUrl || "-"} />
+              <InfoRow label="Nome da loja" value={branding.companyName || "-"} />
+              <InfoRow label="Slogan" value={branding.welcomePhrase || "-"} />
             </div>
           </Card>
         </div>
@@ -1050,7 +1110,14 @@ export default function AdminPanel({
           {!promos.length ? (
             <EmptyState text="Nenhuma promoção cadastrada ainda." />
           ) : (
-            <div style={styles.promoGrid}>
+            <div
+              style={{
+                ...styles.promoGrid,
+                gridTemplateColumns: isMobile
+                  ? "1fr"
+                  : "repeat(auto-fit, minmax(260px, 1fr))",
+              }}
+            >
               {promos.map((promo) => (
                 <div key={promo.id} style={styles.promoCard}>
                   <div style={styles.promoContent}>
@@ -1096,13 +1163,14 @@ export default function AdminPanel({
       <div style={styles.stack}>
         {sectionTitle(
           "Pedidos",
-          "Registre vendas da loja e atualize automaticamente os pontos do cliente."
+          "Registre vendas e atualize automaticamente os pontos do cliente."
         )}
 
-        <div style={getTwoColsStyle(isNarrow)}>
+        <div style={getDualLayout(isTablet)}>
           <Card>
             <h3 style={styles.cardTitle}>Novo pedido</h3>
-            <form onSubmit={submitOrder} style={getFormGridStyle(isNarrow)}>
+
+            <form onSubmit={submitOrder} style={getFormGridStyle(isMobile)}>
               <Field label="Cliente" full>
                 <select
                   style={styles.input}
@@ -1208,7 +1276,9 @@ export default function AdminPanel({
               />
               <InfoRow
                 label="Faturamento"
-                value={formatCurrency(orders.reduce((sum, item) => sum + Number(item.total || 0), 0))}
+                value={formatCurrency(
+                  orders.reduce((sum, item) => sum + Number(item.total || 0), 0)
+                )}
               />
             </div>
           </Card>
@@ -1278,11 +1348,11 @@ export default function AdminPanel({
                   key={item.id}
                   style={{
                     ...styles.checkinCard,
-                    flexDirection: isNarrow ? "column" : "row",
-                    alignItems: isNarrow ? "flex-start" : "center",
+                    flexDirection: isMobile ? "column" : "row",
+                    alignItems: isMobile ? "flex-start" : "center",
                   }}
                 >
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <strong style={styles.checkinName}>
                       {item.customers?.full_name || "Cliente"}
                     </strong>
@@ -1340,13 +1410,13 @@ export default function AdminPanel({
       <div style={styles.stack}>
         {sectionTitle(
           "Configurações",
-          "Ajuste pontuação, meta, identidade visual e canais da loja."
+          "Ajuste pontuação, meta, nome da loja, logo, slogan e canais da marca."
         )}
 
         <Card>
-          <h3 style={styles.cardTitle}>Parâmetros da loja e marca</h3>
+          <h3 style={styles.cardTitle}>Marca, experiência e regras da loja</h3>
 
-          <form onSubmit={submitSettings} style={getFormGridStyle(isNarrow)}>
+          <form onSubmit={submitSettings} style={getFormGridStyle(isMobile)}>
             <Field label="Pontos por real">
               <input
                 style={styles.input}
@@ -1384,6 +1454,7 @@ export default function AdminPanel({
                 onChange={(e) =>
                   setSettingsForm((prev) => ({ ...prev, softwareName: e.target.value }))
                 }
+                placeholder="Ex.: Clube Base"
               />
             </Field>
 
@@ -1394,16 +1465,18 @@ export default function AdminPanel({
                 onChange={(e) =>
                   setSettingsForm((prev) => ({ ...prev, companyName: e.target.value }))
                 }
+                placeholder="Ex.: Savana Açaí"
               />
             </Field>
 
-            <Field label="Logo (URL)">
+            <Field label="Logo da loja (URL)">
               <input
                 style={styles.input}
                 value={settingsForm.logoUrl}
                 onChange={(e) =>
                   setSettingsForm((prev) => ({ ...prev, logoUrl: e.target.value }))
                 }
+                placeholder="https://..."
               />
             </Field>
 
@@ -1439,13 +1512,14 @@ export default function AdminPanel({
               />
             </Field>
 
-            <Field label="Frase de boas-vindas" full>
+            <Field label="Slogan / frase principal da loja" full>
               <textarea
                 style={styles.textarea}
                 value={settingsForm.welcomePhrase}
                 onChange={(e) =>
                   setSettingsForm((prev) => ({ ...prev, welcomePhrase: e.target.value }))
                 }
+                placeholder="Ex.: Seu clube de pontos da loja."
               />
             </Field>
 
@@ -1466,6 +1540,28 @@ export default function AdminPanel({
               ) : null}
             </div>
           </form>
+
+          <div style={styles.previewCard}>
+            <div style={styles.previewLogo}>
+              {settingsForm.logoUrl ? (
+                <img src={settingsForm.logoUrl} alt="Prévia do logo" style={styles.previewLogoImage} />
+              ) : (
+                <span style={styles.previewLogoFallback}>
+                  {(settingsForm.companyName || "L").slice(0, 1).toUpperCase()}
+                </span>
+              )}
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <p style={styles.previewEyebrow}>{settingsForm.softwareName || "Clube Base"}</p>
+              <strong style={styles.previewStoreName}>
+                {settingsForm.companyName || "Minha Loja"}
+              </strong>
+              <p style={styles.previewSlogan}>
+                {settingsForm.welcomePhrase || "Seu clube de pontos da loja."}
+              </p>
+            </div>
+          </div>
         </Card>
       </div>
     );
@@ -1479,13 +1575,13 @@ export default function AdminPanel({
           "Cadastre, edite e controle os acessos internos da operação."
         )}
 
-        <div style={getTwoColsStyle(isNarrow)}>
+        <div style={getDualLayout(isTablet)}>
           <Card>
             <h3 style={styles.cardTitle}>
               {staffForm.id ? "Editar usuário da equipe" : "Novo usuário da equipe"}
             </h3>
 
-            <form onSubmit={submitStaff} style={getFormGridStyle(isNarrow)}>
+            <form onSubmit={submitStaff} style={getFormGridStyle(isMobile)}>
               <Field label="Nome completo">
                 <input
                   style={styles.input}
@@ -1570,7 +1666,7 @@ export default function AdminPanel({
                   style={styles.textarea}
                   value={staffForm.notes}
                   onChange={(e) => setStaffForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Informações internas, setor, turno ou observações"
+                  placeholder="Setor, turno ou observações internas"
                 />
               </Field>
 
@@ -1602,7 +1698,7 @@ export default function AdminPanel({
               <div style={styles.teamList}>
                 {staffUsers.map((user) => (
                   <div key={user.id} style={styles.teamCard}>
-                    <div style={styles.teamInfo}>
+                    <div style={{ minWidth: 0 }}>
                       <strong style={styles.teamName}>{user.name}</strong>
                       <p style={styles.teamMeta}>Login: {user.login}</p>
                       <p style={styles.teamMeta}>Função: {user.role}</p>
@@ -1668,70 +1764,120 @@ export default function AdminPanel({
 
   return (
     <div style={styles.page}>
-      <aside style={styles.sidebar}>
-        <div style={styles.brandBlock}>
-          <div style={styles.logoBubble}>
-            {branding.logoUrl ? (
-              <img src={branding.logoUrl} alt="Logo da loja" style={styles.logoImage} />
-            ) : (
-              <span style={styles.logoFallback}>V</span>
-            )}
+      <style>{`
+        @import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap');
+
+        * {
+          box-sizing: border-box;
+        }
+
+        html, body, #root {
+          margin: 0;
+          padding: 0;
+        }
+
+        body {
+          font-family: 'General Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          color: ${ink};
+          background: ${bg};
+        }
+
+        input, select, textarea, button {
+          font-family: inherit;
+        }
+
+        input::placeholder,
+        textarea::placeholder {
+          color: #9b8fb0;
+        }
+
+        @media (max-width: 1180px) {
+          .admin-page-layout {
+            grid-template-columns: 1fr !important;
+          }
+
+          .admin-sidebar {
+            position: relative !important;
+            top: auto !important;
+            height: auto !important;
+          }
+        }
+
+        @media (max-width: 820px) {
+          .admin-main {
+            padding: 18px !important;
+          }
+        }
+      `}</style>
+
+      <div className="admin-page-layout" style={styles.pageGrid}>
+        <aside className="admin-sidebar" style={styles.sidebar}>
+          <div style={styles.brandBlock}>
+            <div style={styles.logoBubble}>
+              {branding.logoUrl ? (
+                <img src={branding.logoUrl} alt="Logo da loja" style={styles.logoImage} />
+              ) : (
+                <span style={styles.logoFallback}>
+                  {(branding.companyName || "L").slice(0, 1).toUpperCase()}
+                </span>
+              )}
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <p style={styles.eyebrow}>{branding.softwareName || "Clube Base"}</p>
+              <h1 style={styles.brandTitle}>{branding.companyName || "Minha Loja"}</h1>
+              <p style={styles.brandSubtitle}>
+                {branding.welcomePhrase || "Painel da operação da loja"}
+              </p>
+            </div>
           </div>
 
-          <div>
-            <p style={styles.eyebrow}>{branding.softwareName || "Voltta"}</p>
-            <h1 style={styles.brandTitle}>{branding.companyName || "Minha Loja"}</h1>
-            <p style={styles.brandSubtitle}>
-              {branding.welcomePhrase || "Painel da operação da loja"}
-            </p>
+          <nav style={styles.nav}>
+            {tabs.map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    ...styles.navButton,
+                    ...(active ? styles.navButtonActive : {}),
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div style={styles.sidebarFooter}>
+            <button type="button" style={styles.secondaryButtonWide} onClick={onBack}>
+              Voltar
+            </button>
+            <button type="button" style={styles.primaryButtonWide} onClick={onLogout}>
+              Sair do painel
+            </button>
           </div>
-        </div>
+        </aside>
 
-        <nav style={styles.nav}>
-          {tabs.map((tab) => {
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  ...styles.navButton,
-                  ...(active ? styles.navButtonActive : {}),
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+        <main className="admin-main" style={styles.main}>
+          {notice.text ? (
+            <div
+              style={{
+                ...styles.notice,
+                background: notice.type === "error" ? "#fff1f4" : "#eef8f2",
+                borderColor: notice.type === "error" ? "#f3c8d5" : "#cae7d6",
+                color: notice.type === "error" ? danger : success,
+              }}
+            >
+              {notice.text}
+            </div>
+          ) : null}
 
-        <div style={styles.sidebarFooter}>
-          <button type="button" style={styles.secondaryButtonWide} onClick={onBack}>
-            Voltar
-          </button>
-          <button type="button" style={styles.primaryButtonWide} onClick={onLogout}>
-            Sair do painel
-          </button>
-        </div>
-      </aside>
-
-      <main style={styles.main}>
-        {notice.text ? (
-          <div
-            style={{
-              ...styles.notice,
-              background: notice.type === "error" ? "#fff0f4" : "#edf8f1",
-              borderColor: notice.type === "error" ? "#f2cada" : "#cfe9d8",
-              color: notice.type === "error" ? danger : success,
-            }}
-          >
-            {notice.text}
-          </div>
-        ) : null}
-
-        {renderActiveTab()}
-      </main>
+          {renderActiveTab()}
+        </main>
+      </div>
     </div>
   );
 }
@@ -1749,27 +1895,12 @@ function Field({ label, children, full = false }) {
   );
 }
 
-function StatCard({ label, value, helper, highlight = false }) {
+function StatCard({ label, value, helper }) {
   return (
-    <div
-      style={{
-        ...styles.statCard,
-        ...(highlight
-          ? {
-              background: "linear-gradient(135deg, #6f3cc3 0%, #8d67d6 100%)",
-              color: white,
-              borderColor: "transparent",
-            }
-          : {}),
-      }}
-    >
-      <p style={{ ...styles.statLabel, ...(highlight ? { color: "rgba(255,255,255,0.82)" } : {}) }}>
-        {label}
-      </p>
+    <div style={styles.statCard}>
+      <p style={styles.statLabel}>{label}</p>
       <strong style={styles.statValue}>{value}</strong>
-      <p style={{ ...styles.statHelper, ...(highlight ? { color: "rgba(255,255,255,0.76)" } : {}) }}>
-        {helper}
-      </p>
+      <p style={styles.statHelper}>{helper}</p>
     </div>
   );
 }
@@ -1779,6 +1910,15 @@ function InfoRow({ label, value }) {
     <div style={styles.infoRow}>
       <span style={styles.infoLabel}>{label}</span>
       <strong style={styles.infoValue}>{String(value ?? "-")}</strong>
+    </div>
+  );
+}
+
+function InfoMini({ label, value }) {
+  return (
+    <div style={styles.infoMini}>
+      <span style={styles.infoMiniLabel}>{label}</span>
+      <strong style={styles.infoMiniValue}>{String(value ?? "-")}</strong>
     </div>
   );
 }
@@ -1815,18 +1955,19 @@ function formatDate(value, withTime = false) {
   }
 }
 
-function getTwoColsStyle(isNarrow) {
+function getDualLayout(isTablet) {
   return {
     display: "grid",
-    gridTemplateColumns: isNarrow ? "1fr" : "1.1fr 0.9fr",
-    gap: 18,
+    gridTemplateColumns: isTablet ? "1fr" : "minmax(0, 1.15fr) minmax(320px, 0.85fr)",
+    gap: 20,
+    alignItems: "start",
   };
 }
 
-function getFormGridStyle(isNarrow) {
+function getFormGridStyle(singleColumn = false) {
   return {
     display: "grid",
-    gridTemplateColumns: isNarrow ? "1fr" : "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: singleColumn ? "1fr" : "repeat(2, minmax(0, 1fr))",
     gap: 16,
     alignItems: "start",
   };
@@ -1835,37 +1976,49 @@ function getFormGridStyle(isNarrow) {
 const styles = {
   page: {
     minHeight: "100vh",
-    display: "grid",
-    gridTemplateColumns: "290px 1fr",
     background: bg,
     color: ink,
   },
 
+  pageGrid: {
+    minHeight: "100vh",
+    display: "grid",
+    gridTemplateColumns: "300px minmax(0, 1fr)",
+    background: bg,
+  },
+
   sidebar: {
-    background: "linear-gradient(180deg, #2f1c46 0%, #3e255d 100%)",
+    position: "sticky",
+    top: 0,
+    height: "100vh",
+    overflow: "auto",
+    background:
+      "linear-gradient(180deg, #251833 0%, #34204d 52%, #432661 100%)",
     color: white,
     padding: 24,
     display: "flex",
     flexDirection: "column",
-    gap: 24,
-    borderRight: "1px solid rgba(255,255,255,0.08)",
+    gap: 22,
+    borderRight: "1px solid rgba(255,255,255,0.06)",
   },
 
   brandBlock: {
     display: "flex",
-    gap: 14,
     alignItems: "flex-start",
+    gap: 14,
+    minWidth: 0,
   },
 
   logoBubble: {
-    width: 56,
-    height: 56,
+    width: 60,
+    height: 60,
     borderRadius: 18,
-    background: "rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.12)",
     display: "grid",
     placeItems: "center",
     overflow: "hidden",
     flexShrink: 0,
+    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
   },
 
   logoImage: {
@@ -1876,29 +2029,32 @@ const styles = {
 
   logoFallback: {
     fontSize: 22,
-    fontWeight: 900,
+    fontWeight: 700,
     color: white,
   },
 
   eyebrow: {
     margin: 0,
-    fontSize: 12,
+    fontSize: 11,
     textTransform: "uppercase",
-    letterSpacing: 1.4,
-    color: "rgba(255,255,255,0.68)",
+    letterSpacing: 1.5,
+    color: "rgba(255,255,255,0.64)",
   },
 
   brandTitle: {
-    margin: "4px 0 6px",
+    margin: "6px 0 6px",
     fontSize: 22,
     lineHeight: 1.1,
+    color: white,
+    wordBreak: "break-word",
   },
 
   brandSubtitle: {
     margin: 0,
     color: "rgba(255,255,255,0.78)",
     fontSize: 13,
-    lineHeight: 1.5,
+    lineHeight: 1.55,
+    wordBreak: "break-word",
   },
 
   nav: {
@@ -1907,20 +2063,22 @@ const styles = {
   },
 
   navButton: {
+    minHeight: 48,
     border: "1px solid rgba(255,255,255,0.08)",
     background: "transparent",
-    color: "rgba(255,255,255,0.86)",
+    color: "rgba(255,255,255,0.84)",
     borderRadius: 16,
-    padding: "14px 16px",
+    padding: "12px 14px",
     textAlign: "left",
-    fontWeight: 700,
+    fontWeight: 600,
+    fontSize: 15,
     cursor: "pointer",
     transition: "0.2s ease",
   },
 
   navButtonActive: {
     background: "rgba(255,255,255,0.14)",
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: "rgba(255,255,255,0.16)",
     color: white,
   },
 
@@ -1928,6 +2086,7 @@ const styles = {
     marginTop: "auto",
     display: "grid",
     gap: 10,
+    paddingTop: 12,
   },
 
   main: {
@@ -1935,37 +2094,186 @@ const styles = {
     display: "grid",
     gap: 18,
     alignContent: "start",
+    minWidth: 0,
   },
 
   notice: {
     border: "1px solid",
     borderRadius: 16,
     padding: "14px 16px",
-    fontWeight: 700,
+    fontWeight: 600,
+    fontSize: 14,
   },
 
   stack: {
     display: "grid",
-    gap: 18,
+    gap: 20,
+    minWidth: 0,
   },
 
   sectionHeading: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
   },
 
   sectionTitle: {
     margin: 0,
     fontSize: 28,
+    lineHeight: 1.05,
     color: ink,
+    letterSpacing: "-0.02em",
   },
 
   sectionSubtitle: {
-    margin: "6px 0 0",
+    margin: "8px 0 0",
     color: muted,
     fontSize: 15,
+    lineHeight: 1.6,
+    maxWidth: 760,
+  },
+
+  brandHero: {
+    display: "grid",
+    gap: 20,
+  },
+
+  brandHeroCard: {
+    background: "linear-gradient(135deg, #ffffff 0%, #fbf8ff 100%)",
+    border: `1px solid ${border}`,
+    borderRadius: 28,
+    padding: 24,
+    boxShadow: "0 18px 40px rgba(79, 42, 147, 0.08)",
+    display: "grid",
+    gap: 18,
+    minWidth: 0,
+  },
+
+  brandHeroTop: {
+    display: "flex",
+    gap: 18,
+    alignItems: "center",
+    minWidth: 0,
+    flexWrap: "wrap",
+  },
+
+  heroLogo: {
+    width: 86,
+    height: 86,
+    borderRadius: 24,
+    background: accentSoft,
+    display: "grid",
+    placeItems: "center",
+    overflow: "hidden",
+    flexShrink: 0,
+    border: `1px solid ${border}`,
+  },
+
+  heroLogoImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+
+  heroLogoFallback: {
+    fontSize: 28,
+    fontWeight: 700,
+    color: accentDark,
+  },
+
+  heroSoftwareName: {
+    margin: 0,
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
+    color: accent,
+    fontWeight: 700,
+  },
+
+  heroStoreName: {
+    margin: "8px 0 8px",
+    fontSize: 30,
+    lineHeight: 1.04,
+    color: ink,
+    letterSpacing: "-0.03em",
+    wordBreak: "break-word",
+  },
+
+  heroStoreSlogan: {
+    margin: 0,
+    fontSize: 15,
+    lineHeight: 1.7,
+    color: muted,
+    maxWidth: 620,
+    wordBreak: "break-word",
+  },
+
+  heroBadges: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+
+  heroBadge: {
+    minHeight: 34,
+    padding: "0 12px",
+    borderRadius: 999,
+    background: accentSoft,
+    color: accentDark,
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: 13,
+    fontWeight: 600,
+  },
+
+  brandSideCard: {
+    background: "linear-gradient(180deg, #4e2e89 0%, #6740ad 100%)",
+    borderRadius: 28,
+    padding: 24,
+    color: white,
+    display: "grid",
+    gap: 18,
+    boxShadow: "0 18px 40px rgba(79, 42, 147, 0.18)",
+  },
+
+  sideMetaLabel: {
+    margin: 0,
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
+    color: "rgba(255,255,255,0.72)",
+  },
+
+  sideMetaValue: {
+    fontSize: 24,
+    lineHeight: 1.1,
+  },
+
+  sideMetaList: {
+    display: "grid",
+    gap: 10,
+  },
+
+  infoMini: {
+    display: "grid",
+    gap: 4,
+    padding: 12,
+    borderRadius: 16,
+    background: "rgba(255,255,255,0.10)",
+  },
+
+  infoMiniLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.7)",
+  },
+
+  infoMiniValue: {
+    fontSize: 14,
+    color: white,
+    wordBreak: "break-word",
   },
 
   statsGrid: {
@@ -1978,27 +2286,32 @@ const styles = {
     border: `1px solid ${border}`,
     borderRadius: 22,
     padding: 18,
-    boxShadow: "0 18px 42px rgba(90, 54, 119, 0.08)",
+    boxShadow: "0 12px 30px rgba(79, 42, 147, 0.05)",
+    minWidth: 0,
   },
 
   statLabel: {
     margin: 0,
     color: muted,
     fontSize: 13,
-    fontWeight: 700,
+    fontWeight: 600,
   },
 
   statValue: {
     display: "block",
     marginTop: 10,
-    fontSize: 28,
-    lineHeight: 1.1,
+    fontSize: 30,
+    lineHeight: 1.05,
+    color: ink,
+    letterSpacing: "-0.03em",
+    wordBreak: "break-word",
   },
 
   statHelper: {
     margin: "8px 0 0",
     color: muted,
     fontSize: 13,
+    lineHeight: 1.5,
   },
 
   card: {
@@ -2006,20 +2319,19 @@ const styles = {
     border: `1px solid ${border}`,
     borderRadius: 24,
     padding: 22,
-    boxShadow: "0 20px 48px rgba(90, 54, 119, 0.08)",
+    boxShadow: "0 12px 34px rgba(79, 42, 147, 0.05)",
     display: "grid",
     gap: 16,
+    minWidth: 0,
   },
 
   cardTitle: {
     margin: 0,
     fontSize: 22,
+    lineHeight: 1.15,
     color: ink,
-  },
-
-  formGrid: {
-    display: "grid",
-    gap: 16,
+    letterSpacing: "-0.02em",
+    wordBreak: "break-word",
   },
 
   field: {
@@ -2033,174 +2345,138 @@ const styles = {
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: 700,
+    fontSize: 13,
     color: muted,
+    fontWeight: 600,
+    lineHeight: 1.4,
   },
 
   input: {
     width: "100%",
     minWidth: 0,
-    height: 56,
-    borderRadius: 16,
+    minHeight: 52,
     border: `1px solid ${border}`,
-    background: "#fbf9ff",
-    padding: "0 16px",
-    fontSize: 15,
+    borderRadius: 16,
+    padding: "0 15px",
+    background: "#fcfbff",
     color: ink,
     outline: "none",
+    fontSize: 15,
+    lineHeight: 1.4,
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8)",
   },
 
   textarea: {
     width: "100%",
     minWidth: 0,
-    minHeight: 110,
-    borderRadius: 16,
+    minHeight: 108,
+    resize: "vertical",
     border: `1px solid ${border}`,
-    background: "#fbf9ff",
-    padding: 16,
-    fontSize: 15,
+    borderRadius: 16,
+    padding: "14px 15px",
+    background: "#fcfbff",
     color: ink,
     outline: "none",
-    resize: "vertical",
+    fontSize: 15,
+    lineHeight: 1.6,
     fontFamily: "inherit",
-  },
-
-  primaryButton: {
-    height: 52,
-    border: "none",
-    borderRadius: 16,
-    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
-    color: white,
-    fontSize: 15,
-    fontWeight: 800,
-    cursor: "pointer",
-    padding: "0 18px",
-  },
-
-  secondaryButton: {
-    height: 52,
-    borderRadius: 16,
-    border: `1px solid ${border}`,
-    background: "#faf7ff",
-    color: ink,
-    fontSize: 15,
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: "0 18px",
-  },
-
-  primaryButtonWide: {
-    height: 52,
-    border: "none",
-    borderRadius: 16,
-    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
-    color: white,
-    fontSize: 15,
-    fontWeight: 800,
-    cursor: "pointer",
-    width: "100%",
-  },
-
-  secondaryButtonWide: {
-    height: 52,
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(255,255,255,0.08)",
-    color: white,
-    fontSize: 15,
-    fontWeight: 700,
-    cursor: "pointer",
-    width: "100%",
-  },
-
-  ghostButton: {
-    height: 42,
-    borderRadius: 14,
-    border: `1px solid ${border}`,
-    background: "#ffffff",
-    color: ink,
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: "0 14px",
-  },
-
-  dangerButton: {
-    height: 42,
-    borderRadius: 14,
-    border: "1px solid #f0ccd7",
-    background: "#fff4f7",
-    color: danger,
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: "0 14px",
-  },
-
-  linkButton: {
-    height: 52,
-    borderRadius: 16,
-    border: `1px solid ${border}`,
-    background: "#ffffff",
-    color: accent,
-    fontSize: 15,
-    fontWeight: 800,
-    cursor: "pointer",
-    padding: "0 18px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    textDecoration: "none",
   },
 
   actionsRowFull: {
     gridColumn: "1 / -1",
     display: "flex",
+    gap: 10,
     flexWrap: "wrap",
-    gap: 12,
+    marginTop: 4,
   },
 
-  infoList: {
-    display: "grid",
-    gap: 12,
-  },
-
-  infoRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    padding: "12px 0",
-    borderBottom: `1px solid ${border}`,
-  },
-
-  infoLabel: {
-    color: muted,
-    fontSize: 14,
-  },
-
-  infoValue: {
-    color: ink,
-    fontSize: 14,
-    textAlign: "right",
-  },
-
-  quickActions: {
-    display: "grid",
-    gap: 12,
-  },
-
-  quickButton: {
-    minHeight: 52,
+  primaryButton: {
+    minHeight: 50,
+    border: 0,
     borderRadius: 16,
-    border: `1px solid ${border}`,
-    background: "#faf7ff",
-    color: ink,
+    padding: "12px 18px",
+    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
+    color: white,
     fontWeight: 700,
     fontSize: 15,
     cursor: "pointer",
-    textAlign: "left",
-    padding: "0 16px",
+    boxShadow: "0 12px 24px rgba(79, 42, 147, 0.18)",
+  },
+
+  primaryButtonWide: {
+    minHeight: 50,
+    border: 0,
+    borderRadius: 16,
+    padding: "12px 18px",
+    background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
+    color: white,
+    fontWeight: 700,
+    fontSize: 15,
+    cursor: "pointer",
+    width: "100%",
+  },
+
+  secondaryButton: {
+    minHeight: 50,
+    border: `1px solid ${border}`,
+    borderRadius: 16,
+    padding: "12px 18px",
+    background: "#faf7ff",
+    color: ink,
+    fontWeight: 600,
+    fontSize: 15,
+    cursor: "pointer",
+  },
+
+  secondaryButtonWide: {
+    minHeight: 50,
+    border: "1px solid rgba(255,255,255,0.16)",
+    borderRadius: 16,
+    padding: "12px 18px",
+    background: "rgba(255,255,255,0.06)",
+    color: white,
+    fontWeight: 600,
+    fontSize: 15,
+    cursor: "pointer",
+    width: "100%",
+  },
+
+  ghostButton: {
+    minHeight: 40,
+    border: `1px solid ${border}`,
+    borderRadius: 13,
+    padding: "8px 12px",
+    background: white,
+    color: ink,
+    fontWeight: 600,
+    fontSize: 14,
+    cursor: "pointer",
+  },
+
+  dangerButton: {
+    minHeight: 40,
+    border: "1px solid #f2ccd7",
+    borderRadius: 13,
+    padding: "8px 12px",
+    background: "#fff4f7",
+    color: danger,
+    fontWeight: 700,
+    fontSize: 14,
+    cursor: "pointer",
+  },
+
+  linkButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 50,
+    borderRadius: 16,
+    padding: "12px 18px",
+    background: "#eef4ff",
+    color: "#2d60b5",
+    fontWeight: 700,
+    fontSize: 15,
+    textDecoration: "none",
   },
 
   listHeader: {
@@ -2216,38 +2492,43 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 34,
-    padding: "0 12px",
     borderRadius: 999,
-    background: "#f3edfd",
-    color: accent,
-    fontWeight: 800,
-    fontSize: 13,
+    padding: "0 12px",
+    background: accentSoft,
+    color: accentDark,
+    fontSize: 12,
+    fontWeight: 700,
   },
 
   tableWrap: {
     overflowX: "auto",
+    width: "100%",
   },
 
   table: {
     width: "100%",
+    minWidth: 720,
     borderCollapse: "collapse",
   },
 
   th: {
     textAlign: "left",
-    padding: "14px 12px",
-    fontSize: 13,
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
     color: muted,
+    padding: "14px 12px",
     borderBottom: `1px solid ${border}`,
     whiteSpace: "nowrap",
   },
 
   td: {
     padding: "14px 12px",
+    borderBottom: "1px solid #f2edf9",
+    verticalAlign: "top",
     fontSize: 14,
     color: ink,
-    borderBottom: `1px solid ${border}`,
-    verticalAlign: "top",
+    lineHeight: 1.5,
   },
 
   selectedRow: {
@@ -2256,67 +2537,131 @@ const styles = {
 
   inlineActions: {
     display: "flex",
-    flexWrap: "wrap",
     gap: 8,
+    flexWrap: "wrap",
   },
 
-  statusBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    minHeight: 32,
-    padding: "0 12px",
-    borderRadius: 999,
-    fontSize: 13,
-    fontWeight: 800,
+  infoList: {
+    display: "grid",
+    gap: 10,
+  },
+
+  infoRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    alignItems: "flex-start",
+    borderBottom: "1px solid #f2edf9",
+    paddingBottom: 12,
+  },
+
+  infoLabel: {
+    color: muted,
+    fontSize: 14,
+    lineHeight: 1.5,
+    minWidth: 0,
+  },
+
+  infoValue: {
+    color: ink,
+    fontSize: 14,
+    textAlign: "right",
+    lineHeight: 1.5,
+    wordBreak: "break-word",
+  },
+
+  emptyState: {
+    border: `1px dashed ${border}`,
+    borderRadius: 18,
+    padding: 28,
+    textAlign: "center",
+    color: muted,
+    background: "#fcfbff",
+    fontSize: 14,
+    lineHeight: 1.6,
+  },
+
+  quickActions: {
+    display: "grid",
+    gap: 10,
+  },
+
+  quickButton: {
+    minHeight: 52,
+    border: `1px solid ${border}`,
+    borderRadius: 16,
+    padding: "14px 16px",
+    background: "#faf7ff",
+    color: ink,
+    fontWeight: 700,
+    fontSize: 15,
+    textAlign: "left",
+    cursor: "pointer",
   },
 
   promoGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
     gap: 14,
   },
 
   promoCard: {
     border: `1px solid ${border}`,
     borderRadius: 20,
-    background: "#fbf9ff",
-    padding: 18,
+    background: "#fcfbff",
+    overflow: "hidden",
+    minWidth: 0,
   },
 
   promoContent: {
+    padding: 18,
     display: "grid",
     gap: 12,
+    minWidth: 0,
   },
 
   promoTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 10,
   },
 
   promoTag: {
     display: "inline-flex",
-    minHeight: 30,
     alignItems: "center",
-    padding: "0 10px",
+    minHeight: 30,
     borderRadius: 999,
+    padding: "0 10px",
     background: "#efe7fb",
-    color: accent,
-    fontWeight: 800,
+    color: accentDark,
     fontSize: 12,
+    fontWeight: 700,
   },
 
   promoTitle: {
     margin: 0,
     fontSize: 18,
+    lineHeight: 1.2,
     color: ink,
+    wordBreak: "break-word",
   },
 
   promoText: {
     margin: 0,
     color: muted,
     fontSize: 14,
-    lineHeight: 1.55,
+    lineHeight: 1.6,
+    wordBreak: "break-word",
+  },
+
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: 30,
+    borderRadius: 999,
+    padding: "0 10px",
+    fontSize: 12,
+    fontWeight: 700,
   },
 
   checkinList: {
@@ -2328,10 +2673,10 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     gap: 16,
-    padding: 18,
-    borderRadius: 18,
     border: `1px solid ${border}`,
-    background: "#fbf9ff",
+    borderRadius: 18,
+    padding: 18,
+    background: "#fcfbff",
   },
 
   checkinName: {
@@ -2343,6 +2688,8 @@ const styles = {
     margin: "6px 0 0",
     color: muted,
     fontSize: 14,
+    lineHeight: 1.55,
+    wordBreak: "break-word",
   },
 
   teamList: {
@@ -2351,42 +2698,90 @@ const styles = {
   },
 
   teamCard: {
+    border: `1px solid ${border}`,
+    borderRadius: 18,
+    background: "#fcfbff",
+    padding: 16,
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: 16,
-    padding: 18,
-    borderRadius: 18,
-    border: `1px solid ${border}`,
-    background: "#fbf9ff",
+    gap: 12,
     flexWrap: "wrap",
-  },
-
-  teamInfo: {
-    display: "grid",
-    gap: 6,
   },
 
   teamName: {
     fontSize: 16,
     color: ink,
+    wordBreak: "break-word",
   },
 
   teamMeta: {
-    margin: 0,
+    margin: "5px 0 0",
     color: muted,
     fontSize: 14,
+    lineHeight: 1.5,
+    wordBreak: "break-word",
   },
 
-  emptyState: {
-    minHeight: 120,
+  previewCard: {
+    marginTop: 4,
+    border: `1px solid ${border}`,
+    borderRadius: 22,
+    background: "linear-gradient(135deg, #faf7ff 0%, #ffffff 100%)",
+    padding: 18,
+    display: "flex",
+    gap: 16,
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+
+  previewLogo: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    background: accentSoft,
     display: "grid",
     placeItems: "center",
-    textAlign: "center",
+    overflow: "hidden",
+    border: `1px solid ${border}`,
+    flexShrink: 0,
+  },
+
+  previewLogoImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+
+  previewLogoFallback: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: accentDark,
+  },
+
+  previewEyebrow: {
+    margin: 0,
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
+    color: accent,
+    fontWeight: 700,
+  },
+
+  previewStoreName: {
+    display: "block",
+    marginTop: 6,
+    fontSize: 22,
+    color: ink,
+    lineHeight: 1.1,
+    wordBreak: "break-word",
+  },
+
+  previewSlogan: {
+    margin: "8px 0 0",
     color: muted,
-    border: `1px dashed ${border}`,
-    borderRadius: 18,
-    background: "#fbf9ff",
-    padding: 18,
+    fontSize: 14,
+    lineHeight: 1.6,
+    wordBreak: "break-word",
   },
 };

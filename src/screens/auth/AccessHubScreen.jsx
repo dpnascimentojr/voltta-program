@@ -1,4 +1,5 @@
 import { useState } from "react";
+import brandLogo from "../../assets/logo.png";
 
 export default function AccessHubScreen({
   onCustomerEnter,
@@ -14,6 +15,14 @@ export default function AccessHubScreen({
   });
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
+
+  const brandName =
+    branding.companyName?.trim() || branding.softwareName?.trim() || "Voltta";
+
+  const softwareName = branding.softwareName?.trim() || "Voltta";
+  const slogan =
+    branding.welcomePhrase?.trim() ||
+    "Programa de fidelidade, operação e relacionamento em uma experiência só.";
 
   async function handleAdminSubmit(event) {
     event.preventDefault();
@@ -31,33 +40,64 @@ export default function AccessHubScreen({
 
   return (
     <div style={styles.page}>
-      <div style={styles.shell}>
+      <div
+        style={{
+          ...styles.shell,
+          gridTemplateColumns: showAdminLogin
+            ? "minmax(0, 1.05fr) minmax(0, 0.95fr)"
+            : "minmax(0, 1.08fr) minmax(0, 0.92fr)",
+        }}
+      >
         <section style={styles.heroCard}>
-          <div style={styles.badge}>
-            {branding.softwareName || "Clube Base"}
+          <div style={styles.heroTop}>
+            <div style={styles.brandLockup}>
+              <div style={styles.brandMark}>
+                <img src={brandLogo} alt="Logo Voltta" style={styles.brandImage} />
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <div style={styles.badge}>{softwareName}</div>
+                <p style={styles.brandName}>{brandName}</p>
+              </div>
+            </div>
+
+            <div style={styles.heroTag}>Webapp da loja</div>
           </div>
 
-          <h1 style={styles.heroTitle}>
-            Fidelidade elegante, prática e feita para voltar sempre.
-          </h1>
+          <div style={styles.heroBody}>
+            <h1 style={styles.heroTitle}>
+              Fidelidade moderna com identidade Voltta e operação pronta para uso.
+            </h1>
 
-          <p style={styles.heroText}>
-            Entre com seu telefone e PIN para acompanhar pontos, cupons,
-            promoções e histórico. A loja acessa o painel por login interno.
-          </p>
+            <p style={styles.heroText}>
+              Entre na área do cliente para acompanhar pontos, cupons e promoções,
+              ou acesse o painel da loja com login interno da equipe.
+            </p>
+          </div>
+
+          <div style={styles.heroHighlight}>
+            <strong style={styles.heroHighlightTitle}>{slogan}</strong>
+            <p style={styles.heroHighlightText}>
+              Os arquivos visuais do projeto agora seguem a marca Voltta, usando os
+              PNGs oficiais já existentes no app.
+            </p>
+          </div>
 
           <div style={styles.heroInfo}>
             <div style={styles.heroInfoItem}>
-              <span style={styles.heroInfoLabel}>Loja</span>
-              <strong style={styles.heroInfoValue}>
-                {branding.companyName || "Minha Loja"}
-              </strong>
+              <span style={styles.heroInfoLabel}>Marca ativa</span>
+              <strong style={styles.heroInfoValue}>Voltta</strong>
+            </div>
+
+            <div style={styles.heroInfoItem}>
+              <span style={styles.heroInfoLabel}>Logo principal usada aqui</span>
+              <strong style={styles.heroInfoValue}>assets/logo.png</strong>
             </div>
 
             <div style={styles.heroInfoItem}>
               <span style={styles.heroInfoLabel}>Experiência</span>
               <strong style={styles.heroInfoValue}>
-                Cliente e operação no mesmo sistema
+                Cliente e operação no mesmo ecossistema
               </strong>
             </div>
           </div>
@@ -68,6 +108,9 @@ export default function AccessHubScreen({
             <>
               <p style={styles.eyebrow}>Área do cliente</p>
               <h2 style={styles.title}>Entrar na sua conta</h2>
+              <p style={styles.subtitle}>
+                Consulte seu saldo, acompanhe vantagens e use seus benefícios no app.
+              </p>
 
               <div style={styles.formGrid}>
                 <label style={styles.field}>
@@ -91,7 +134,11 @@ export default function AccessHubScreen({
                   />
                 </label>
 
-                <button type="button" style={styles.primaryButton} onClick={onCustomerEnter}>
+                <button
+                  type="button"
+                  style={styles.primaryButton}
+                  onClick={onCustomerEnter}
+                >
                   Entrar na área do cliente
                 </button>
 
@@ -118,7 +165,7 @@ export default function AccessHubScreen({
               <p style={styles.eyebrow}>Painel da loja</p>
               <h2 style={styles.title}>Login da equipe</h2>
               <p style={styles.subtitle}>
-                Use o login cadastrado no painel administrativo para acessar a operação.
+                Use o login cadastrado internamente para acessar a operação da loja.
               </p>
 
               <form onSubmit={handleAdminSubmit} style={styles.formGrid}>
@@ -183,9 +230,8 @@ const styles = {
 
   shell: {
     width: "100%",
-    maxWidth: "1220px",
+    maxWidth: "1240px",
     display: "grid",
-    gridTemplateColumns: "1.1fr 0.9fr",
     gap: "26px",
     alignItems: "stretch",
   },
@@ -193,69 +239,161 @@ const styles = {
   heroCard: {
     minHeight: "720px",
     borderRadius: "34px",
-    padding: "42px 36px",
+    padding: "38px 34px",
     background:
-      "linear-gradient(180deg, #4d2a7d 0%, #5e34a3 48%, #7047be 100%)",
+      "linear-gradient(180deg, #241531 0%, #342047 38%, #4b2f68 100%)",
     color: "#fff",
-    boxShadow: "0 30px 70px rgba(90, 54, 119, 0.24)",
+    boxShadow: "0 30px 70px rgba(58, 33, 87, 0.24)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
     gap: "24px",
+    overflow: "hidden",
+  },
+
+  heroTop: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "16px",
+    flexWrap: "wrap",
+  },
+
+  brandLockup: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    minWidth: 0,
+  },
+
+  brandMark: {
+    width: "86px",
+    height: "86px",
+    borderRadius: "24px",
+    background: "rgba(255,255,255,0.12)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    display: "grid",
+    placeItems: "center",
+    padding: "10px",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+    flexShrink: 0,
+  },
+
+  brandImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    display: "block",
   },
 
   badge: {
-    alignSelf: "flex-start",
-    padding: "10px 16px",
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: "34px",
+    padding: "8px 14px",
     borderRadius: "999px",
-    background: "rgba(255,255,255,0.16)",
-    fontSize: "14px",
+    background: "rgba(255,255,255,0.14)",
+    fontSize: "12px",
+    fontWeight: 800,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    marginBottom: "10px",
+  },
+
+  brandName: {
+    margin: 0,
+    fontSize: "17px",
+    lineHeight: 1.2,
+    color: "rgba(255,255,255,0.82)",
+    fontWeight: 700,
+  },
+
+  heroTag: {
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: "34px",
+    padding: "8px 14px",
+    borderRadius: "999px",
+    background: "rgba(255,255,255,0.10)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    fontSize: "12px",
     fontWeight: 800,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
+    color: "rgba(255,255,255,0.82)",
+  },
+
+  heroBody: {
+    display: "grid",
+    gap: "18px",
   },
 
   heroTitle: {
     margin: 0,
-    maxWidth: "540px",
-    fontSize: "78px",
+    maxWidth: "680px",
+    fontSize: "72px",
     lineHeight: 0.96,
     fontWeight: 800,
-    letterSpacing: "-0.04em",
+    letterSpacing: "-0.045em",
   },
 
   heroText: {
     margin: 0,
-    maxWidth: "520px",
-    fontSize: "26px",
-    lineHeight: 1.45,
+    maxWidth: "560px",
+    fontSize: "24px",
+    lineHeight: 1.5,
     color: "rgba(255,255,255,0.88)",
+  },
+
+  heroHighlight: {
+    padding: "20px 22px",
+    borderRadius: "24px",
+    background: "rgba(255,255,255,0.10)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    display: "grid",
+    gap: "8px",
+  },
+
+  heroHighlightTitle: {
+    fontSize: "18px",
+    lineHeight: 1.35,
+  },
+
+  heroHighlightText: {
+    margin: 0,
+    fontSize: "15px",
+    lineHeight: 1.6,
+    color: "rgba(255,255,255,0.76)",
+    maxWidth: "620px",
   },
 
   heroInfo: {
     display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     gap: "14px",
   },
 
   heroInfoItem: {
-    padding: "18px 20px",
+    minWidth: 0,
+    padding: "18px 18px",
     borderRadius: "22px",
-    background: "rgba(255,255,255,0.12)",
-    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(255,255,255,0.11)",
+    border: "1px solid rgba(255,255,255,0.10)",
   },
 
   heroInfoLabel: {
     display: "block",
-    fontSize: "12px",
+    fontSize: "11px",
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    color: "rgba(255,255,255,0.68)",
-    marginBottom: "6px",
+    color: "rgba(255,255,255,0.66)",
+    marginBottom: "8px",
   },
 
   heroInfoValue: {
-    fontSize: "18px",
-    lineHeight: 1.35,
+    fontSize: "16px",
+    lineHeight: 1.45,
+    wordBreak: "break-word",
   },
 
   formCard: {
@@ -281,16 +419,17 @@ const styles = {
 
   title: {
     margin: "10px 0 8px",
-    fontSize: "48px",
-    lineHeight: 1.05,
+    fontSize: "46px",
+    lineHeight: 1.04,
     color: "#2f2340",
   },
 
   subtitle: {
     margin: "0 0 22px",
     fontSize: "17px",
-    lineHeight: 1.55,
+    lineHeight: 1.6,
     color: "#78688f",
+    maxWidth: "480px",
   },
 
   formGrid: {
@@ -311,21 +450,21 @@ const styles = {
   },
 
   input: {
-    height: "72px",
-    borderRadius: "22px",
+    height: "68px",
+    borderRadius: "20px",
     border: "1px solid #eadff7",
     padding: "0 18px",
-    fontSize: "28px",
+    fontSize: "22px",
     color: "#2f2340",
     outline: "none",
     background: "#fbf9ff",
   },
 
   primaryButton: {
-    height: "64px",
+    height: "62px",
     border: "none",
     borderRadius: "20px",
-    background: "linear-gradient(135deg, #6f3cc3 0%, #5a2fab 100%)",
+    background: "linear-gradient(135deg, #6f3cc3 0%, #51279a 100%)",
     color: "#fff",
     fontSize: "18px",
     fontWeight: 800,
