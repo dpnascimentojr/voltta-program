@@ -16,11 +16,6 @@ export default function AccessHubScreen({
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
 
-  const brandName =
-    branding.companyName?.trim() || branding.softwareName?.trim() || "Voltta";
-
-  const softwareName = branding.softwareName?.trim() || "Voltta";
-
   const slogan =
     branding.welcomePhrase?.trim() || "Conecte clientes. Movimente sua marca.";
 
@@ -41,35 +36,17 @@ export default function AccessHubScreen({
   return (
     <div style={styles.page}>
       <div style={styles.shell}>
-        <section style={styles.heroCard}>
-          <div style={styles.heroTop}>
-            <div style={styles.brandRow}>
-              <img src={brandLogo} alt="Logo Voltta" style={styles.heroLogo} />
-
-              <div style={styles.brandCopy}>
-                <span style={styles.brandPill}>{softwareName}</span>
-                <h1 style={styles.heroTitle}>{brandName}</h1>
-              </div>
+        <section style={styles.formCard}>
+          <div style={styles.loginBrand}>
+            <div style={styles.loginLogoWrap}>
+              <img src={brandLogo} alt="Logo da marca" style={styles.loginLogo} />
             </div>
           </div>
 
-          <div style={styles.heroBody}>
-            <p style={styles.heroSlogan}>{slogan}</p>
-            <p style={styles.heroText}>Fidelidade simples para cliente e loja.</p>
-          </div>
-
-          <div style={styles.heroFooter}>
-            <span style={styles.heroMiniTag}>Cliente</span>
-            <span style={styles.heroMiniTag}>Painel da loja</span>
-            <span style={styles.heroMiniTag}>Voltta</span>
-          </div>
-        </section>
-
-        <section style={styles.formCard}>
           {!showAdminLogin ? (
             <>
               <p style={styles.eyebrow}>Área do cliente</p>
-              <h2 style={styles.title}>Entrar</h2>
+              <h1 style={styles.title}>Entrar</h1>
 
               <div style={styles.formGrid}>
                 <label style={styles.field}>
@@ -122,7 +99,7 @@ export default function AccessHubScreen({
           ) : (
             <>
               <p style={styles.eyebrow}>Painel da loja</p>
-              <h2 style={styles.title}>Login da equipe</h2>
+              <h1 style={styles.title}>Login da equipe</h1>
 
               <form onSubmit={handleAdminSubmit} style={styles.formGrid}>
                 <label style={styles.field}>
@@ -171,6 +148,14 @@ export default function AccessHubScreen({
             </>
           )}
         </section>
+
+        <section style={styles.heroCard}>
+          <div style={styles.heroContent}>
+            <p style={styles.heroEyebrow}>Voltta</p>
+            <h2 style={styles.heroSlogan}>{slogan}</h2>
+            <p style={styles.heroText}>Fidelidade simples para cliente e loja.</p>
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -182,129 +167,17 @@ const styles = {
     display: "grid",
     placeItems: "center",
     padding: "28px",
+    background:
+      "radial-gradient(circle at top left, rgba(255,255,255,0.92) 0, rgba(255,255,255,0) 24%), radial-gradient(circle at bottom right, rgba(208,190,241,0.42) 0, rgba(208,190,241,0) 32%), linear-gradient(180deg, #f8f5ff 0%, #f3eefb 100%)",
   },
 
   shell: {
     width: "100%",
     maxWidth: "1240px",
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1.08fr) minmax(0, 0.92fr)",
+    gridTemplateColumns: "minmax(0, 0.92fr) minmax(0, 1.08fr)",
     gap: "26px",
     alignItems: "stretch",
-  },
-
-  heroCard: {
-    minHeight: "720px",
-    borderRadius: "34px",
-    padding: "42px 38px",
-    background:
-      "linear-gradient(180deg, #241531 0%, #342047 42%, #4a2f67 100%)",
-    color: "#fff",
-    boxShadow: "0 30px 70px rgba(58, 33, 87, 0.24)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    gap: "24px",
-    overflow: "hidden",
-  },
-
-  heroTop: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: "16px",
-    flexWrap: "wrap",
-  },
-
-  brandRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "18px",
-    minWidth: 0,
-  },
-
-  heroLogo: {
-    width: "156px",
-    height: "156px",
-    objectFit: "contain",
-    display: "block",
-    flexShrink: 0,
-    filter: "drop-shadow(0 18px 40px rgba(0,0,0,0.18))",
-  },
-
-  brandCopy: {
-    display: "grid",
-    gap: "10px",
-    minWidth: 0,
-  },
-
-  brandPill: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "fit-content",
-    minHeight: "42px",
-    padding: "10px 18px",
-    borderRadius: "999px",
-    background: "rgba(255,255,255,0.10)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    fontSize: "15px",
-    fontWeight: 800,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-  },
-
-  heroTitle: {
-    margin: 0,
-    fontSize: "40px",
-    lineHeight: 1,
-    fontWeight: 800,
-    letterSpacing: "-0.03em",
-    color: "#ffffff",
-  },
-
-  heroBody: {
-    display: "grid",
-    gap: "16px",
-    alignContent: "center",
-    flex: 1,
-  },
-
-  heroSlogan: {
-    margin: 0,
-    maxWidth: "700px",
-    fontSize: "80px",
-    lineHeight: 0.94,
-    fontWeight: 800,
-    letterSpacing: "-0.05em",
-    color: "#ffffff",
-  },
-
-  heroText: {
-    margin: 0,
-    maxWidth: "520px",
-    fontSize: "24px",
-    lineHeight: 1.45,
-    color: "rgba(255,255,255,0.84)",
-  },
-
-  heroFooter: {
-    display: "flex",
-    gap: "12px",
-    flexWrap: "wrap",
-  },
-
-  heroMiniTag: {
-    display: "inline-flex",
-    alignItems: "center",
-    minHeight: "38px",
-    padding: "8px 14px",
-    borderRadius: "999px",
-    background: "rgba(255,255,255,0.10)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    fontSize: "13px",
-    fontWeight: 700,
-    color: "rgba(255,255,255,0.82)",
   },
 
   formCard: {
@@ -312,11 +185,33 @@ const styles = {
     borderRadius: "34px",
     padding: "34px 30px",
     boxShadow: "0 26px 60px rgba(104, 78, 136, 0.12)",
-    border: "1px solid rgba(111, 60, 195, 0.10)",
+    border: "1px solid rgba(111, 60, 195, 0.08)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     minHeight: "720px",
+  },
+
+  loginBrand: {
+    display: "flex",
+    justifyContent: "flex-start",
+    marginBottom: "22px",
+  },
+
+  loginLogoWrap: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "14px 18px",
+    borderRadius: "24px",
+    background: "#f6f1ff",
+  },
+
+  loginLogo: {
+    width: "150px",
+    height: "150px",
+    objectFit: "contain",
+    display: "block",
   },
 
   eyebrow: {
@@ -330,8 +225,8 @@ const styles = {
 
   title: {
     margin: "10px 0 18px",
-    fontSize: "48px",
-    lineHeight: 1.04,
+    fontSize: "54px",
+    lineHeight: 1.02,
     color: "#2f2340",
   },
 
@@ -372,7 +267,7 @@ const styles = {
     fontSize: "18px",
     fontWeight: 800,
     cursor: "pointer",
-    boxShadow: "0 18px 36px rgba(111, 60, 195, 0.24)",
+    boxShadow: "0 18px 36px rgba(111, 60, 195, 0.20)",
   },
 
   secondaryButton: {
@@ -411,5 +306,52 @@ const styles = {
     color: "#c74970",
     fontSize: "15px",
     fontWeight: 700,
+  },
+
+  heroCard: {
+    minHeight: "720px",
+    borderRadius: "34px",
+    padding: "42px 40px",
+    background:
+      "linear-gradient(180deg, #241531 0%, #342047 42%, #4d3170 100%)",
+    color: "#fff",
+    boxShadow: "0 30px 70px rgba(58, 33, 87, 0.22)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  heroContent: {
+    width: "100%",
+    display: "grid",
+    gap: "18px",
+    alignContent: "center",
+  },
+
+  heroEyebrow: {
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 800,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.68)",
+  },
+
+  heroSlogan: {
+    margin: 0,
+    maxWidth: "680px",
+    fontSize: "78px",
+    lineHeight: 0.95,
+    fontWeight: 800,
+    letterSpacing: "-0.05em",
+    color: "#ffffff",
+  },
+
+  heroText: {
+    margin: 0,
+    maxWidth: "460px",
+    fontSize: "24px",
+    lineHeight: 1.4,
+    color: "rgba(255,255,255,0.82)",
   },
 };
