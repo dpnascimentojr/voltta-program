@@ -65,10 +65,16 @@ const emptyBonusForm = {
 };
 
 const emptyStaffForm = {
+  id: "",
   name: "",
   login: "",
   role: "Funcionário",
   password: "",
+  email: "",
+  phone: "",
+  cpf: "",
+  status: "Ativo",
+  notes: "",
 };
 
 export default function AdminPanel({
@@ -98,9 +104,11 @@ export default function AdminPanel({
   onAddBonus,
   onSaveConfig,
   onAddStaffUser,
+  onUpdateStaffUser,
   onDeleteStaffUser,
   branding = {},
   whatsappLink = "",
+  currentAdminUser = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [busy, setBusy] = useState("");
@@ -173,8 +181,9 @@ export default function AdminPanel({
       totalPoints,
       totalCoupons,
       pendingCheckins: pendingCheckins.length,
+      totalTeam: staffUsers.length,
     };
-  }, [customers, products, promos, orders, pendingCheckins]);
+  }, [customers, products, promos, orders, pendingCheckins, staffUsers]);
 
   function showSuccess(text) {
     setNotice({ type: "success", text });
@@ -265,6 +274,22 @@ export default function AdminPanel({
       image: promo.image || "",
     });
     setActiveTab("promos");
+  }
+
+  function handleEditStaff(user) {
+    setStaffForm({
+      id: user.id,
+      name: user.name || "",
+      login: user.login || "",
+      role: user.role || "Funcionário",
+      password: user.password || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      cpf: user.cpf || "",
+      status: user.status || "Ativo",
+      notes: user.notes || "",
+    });
+    setActiveTab("team");
   }
 
   async function submitCustomer(event) {
@@ -443,20 +468,35 @@ export default function AdminPanel({
       return;
     }
 
-    if (typeof onAddStaffUser !== "function") {
-      showError(new Error("Função de cadastro de funcionários não configurada no App."));
+    const payload = {
+      id: staffForm.id,
+      name: staffForm.name.trim(),
+      login: staffForm.login.trim(),
+      role: staffForm.role,
+      password: staffForm.password.trim(),
+      email: staffForm.email.trim(),
+      phone: staffForm.phone.trim(),
+      cpf: staffForm.cpf.trim(),
+      status: staffForm.status,
+      notes: staffForm.notes.trim(),
+    };
+
+    if (staffForm.id) {
+      await runTask(
+        "save-staff",
+        async () => {
+          await onUpdateStaffUser(payload);
+          resetStaffForm();
+        },
+        "Usuário da equipe atualizado."
+      );
       return;
     }
 
     await runTask(
       "save-staff",
       async () => {
-        await onAddStaffUser({
-          name: staffForm.name.trim(),
-          login: staffForm.login.trim(),
-          role: staffForm.role,
-          password: staffForm.password.trim(),
-        });
+        await onAddStaffUser(payload);
         resetStaffForm();
       },
       "Usuário da equipe adicionado."
@@ -506,30 +546,24 @@ export default function AdminPanel({
             helper="Clientes com benefício"
           />
           <StatCard
-            label="Check-ins pendentes"
-            value={stats.pendingCheckins}
-            helper="Aguardando conferência"
-            highlight
+            label="Equipe"
+            value={stats.totalTeam}
+            helper="Acessos cadastrados"
           />
         </div>
 
         <div style={getTwoColsStyle(isNarrow)}>
           <Card>
-            <h3 style={styles.cardTitle}>Cliente em destaque</h3>
-            {selectedCustomer ? (
+            <h3 style={styles.cardTitle}>Usuário logado</h3>
+            {currentAdminUser ? (
               <div style={styles.infoList}>
-                <InfoRow label="Nome" value={selectedCustomer.name} />
-                <InfoRow label="Telefone" value={selectedCustomer.phone || "-"} />
-                <InfoRow label="Pontos" value={selectedCustomer.points || 0} />
-                <InfoRow
-                  label="Gasto total"
-                  value={formatCurrency(selectedCustomer.totalSpent || 0)}
-                />
-                <InfoRow label="Visitas" value={selectedCustomer.visits || 0} />
-                <InfoRow label="Nível" value={selectedCustomer.tier || "Bronze"} />
+                <InfoRow label="Nome" value={currentAdminUser.name} />
+                <InfoRow label="Login" value={currentAdminUser.login} />
+                <InfoRow label="Função" value={currentAdminUser.role} />
+                <InfoRow label="Status" value={currentAdminUser.status || "Ativo"} />
               </div>
             ) : (
-              <EmptyState text="Nenhum cliente selecionado no momento." />
+              <EmptyState text="Nenhum usuário autenticado no momento." />
             )}
           </Card>
 
@@ -538,7 +572,7 @@ export default function AdminPanel({
             <div style={styles.quickActions}>
               <QuickActionButton label="Cadastrar cliente" onClick={() => setActiveTab("customers")} />
               <QuickActionButton label="Registrar pedido" onClick={() => setActiveTab("orders")} />
-              <QuickActionButton label="Aprovar check-ins" onClick={() => setActiveTab("checkins")} />
+              <QuickActionButton label="Gerenciar equipe" onClick={() => setActiveTab("team")} />
               <QuickActionButton label="Editar configurações" onClick={() => setActiveTab("settings")} />
             </div>
           </Card>
@@ -1380,7 +1414,7 @@ export default function AdminPanel({
                 onChange={(e) =>
                   setSettingsForm((prev) => ({ ...prev, instagramUrl: e.target.value }))
                 }
-                placeholder="@sualoja"
+                placeholder="@minhaloja"
               />
             </Field>
 
@@ -1391,13 +1425,13 @@ export default function AdminPanel({
                 onChange={(e) =>
                   setSettingsForm((prev) => ({ ...prev, whatsappNumber: e.target.value }))
                 }
-                placeholder="5575999990000"
+                placeholder="5575999999999"
               />
             </Field>
 
             <Field label="Mensagem do WhatsApp" full>
-              <input
-                style={styles.input}
+              <textarea
+                style={styles.textarea}
                 value={settingsForm.whatsappMessage}
                 onChange={(e) =>
                   setSettingsForm((prev) => ({ ...prev, whatsappMessage: e.target.value }))
@@ -1427,7 +1461,7 @@ export default function AdminPanel({
                   rel="noopener noreferrer"
                   style={styles.linkButton}
                 >
-                  Abrir WhatsApp da loja
+                  Abrir WhatsApp
                 </a>
               ) : null}
             </div>
@@ -1440,19 +1474,24 @@ export default function AdminPanel({
   function renderTeam() {
     return (
       <div style={styles.stack}>
-        {sectionTitle("Equipe", "Cadastre acessos internos para uso da operação.")}
+        {sectionTitle(
+          "Equipe",
+          "Cadastre, edite e controle os acessos internos da operação."
+        )}
 
         <div style={getTwoColsStyle(isNarrow)}>
           <Card>
-            <h3 style={styles.cardTitle}>Novo usuário da equipe</h3>
+            <h3 style={styles.cardTitle}>
+              {staffForm.id ? "Editar usuário da equipe" : "Novo usuário da equipe"}
+            </h3>
 
             <form onSubmit={submitStaff} style={getFormGridStyle(isNarrow)}>
-              <Field label="Nome">
+              <Field label="Nome completo">
                 <input
                   style={styles.input}
                   value={staffForm.name}
                   onChange={(e) => setStaffForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nome do funcionário"
+                  placeholder="Nome do colaborador"
                 />
               </Field>
 
@@ -1461,7 +1500,7 @@ export default function AdminPanel({
                   style={styles.input}
                   value={staffForm.login}
                   onChange={(e) => setStaffForm((prev) => ({ ...prev, login: e.target.value }))}
-                  placeholder="usuario01"
+                  placeholder="login"
                 />
               </Field>
 
@@ -1472,24 +1511,76 @@ export default function AdminPanel({
                   onChange={(e) => setStaffForm((prev) => ({ ...prev, role: e.target.value }))}
                 >
                   <option>Funcionário</option>
-                  <option>Administrador</option>
+                  <option>Caixa</option>
                   <option>Gerente</option>
+                  <option>Administrador</option>
                 </select>
               </Field>
 
               <Field label="Senha">
                 <input
-                  type="text"
                   style={styles.input}
                   value={staffForm.password}
                   onChange={(e) => setStaffForm((prev) => ({ ...prev, password: e.target.value }))}
-                  placeholder="123456"
+                  placeholder="Senha de acesso"
+                  type="password"
+                />
+              </Field>
+
+              <Field label="E-mail">
+                <input
+                  style={styles.input}
+                  value={staffForm.email}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="colaborador@email.com"
+                />
+              </Field>
+
+              <Field label="Telefone">
+                <input
+                  style={styles.input}
+                  value={staffForm.phone}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  placeholder="(75) 99999-0000"
+                />
+              </Field>
+
+              <Field label="CPF">
+                <input
+                  style={styles.input}
+                  value={staffForm.cpf}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, cpf: e.target.value }))}
+                  placeholder="000.000.000-00"
+                />
+              </Field>
+
+              <Field label="Status">
+                <select
+                  style={styles.input}
+                  value={staffForm.status}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, status: e.target.value }))}
+                >
+                  <option>Ativo</option>
+                  <option>Inativo</option>
+                </select>
+              </Field>
+
+              <Field label="Observações" full>
+                <textarea
+                  style={styles.textarea}
+                  value={staffForm.notes}
+                  onChange={(e) => setStaffForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Informações internas, setor, turno ou observações"
                 />
               </Field>
 
               <div style={styles.actionsRowFull}>
                 <button type="submit" style={styles.primaryButton} disabled={busy === "save-staff"}>
-                  {busy === "save-staff" ? "Salvando..." : "Adicionar usuário"}
+                  {busy === "save-staff"
+                    ? "Salvando..."
+                    : staffForm.id
+                    ? "Atualizar usuário"
+                    : "Adicionar usuário"}
                 </button>
 
                 <button type="button" style={styles.secondaryButton} onClick={resetStaffForm}>
@@ -1510,37 +1601,34 @@ export default function AdminPanel({
             ) : (
               <div style={styles.teamList}>
                 {staffUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    style={{
-                      ...styles.teamCard,
-                      gridTemplateColumns: isNarrow ? "1fr" : "minmax(0, 1fr) auto",
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
+                  <div key={user.id} style={styles.teamCard}>
+                    <div style={styles.teamInfo}>
                       <strong style={styles.teamName}>{user.name}</strong>
                       <p style={styles.teamMeta}>Login: {user.login}</p>
                       <p style={styles.teamMeta}>Função: {user.role}</p>
+                      <p style={styles.teamMeta}>E-mail: {user.email || "-"}</p>
+                      <p style={styles.teamMeta}>Telefone: {user.phone || "-"}</p>
+                      <p style={styles.teamMeta}>Status: {user.status || "Ativo"}</p>
                     </div>
 
                     <div style={styles.inlineActions}>
                       <button
                         type="button"
+                        style={styles.ghostButton}
+                        onClick={() => handleEditStaff(user)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
                         style={styles.dangerButton}
-                        onClick={() => {
-                          if (typeof onDeleteStaffUser !== "function") {
-                            showError(
-                              new Error("Função de exclusão de funcionários não configurada no App.")
-                            );
-                            return;
-                          }
-
+                        onClick={() =>
                           runTask(
                             `delete-staff-${user.id}`,
                             async () => onDeleteStaffUser(user.id),
-                            "Usuário removido com sucesso."
-                          );
-                        }}
+                            "Usuário da equipe removido."
+                          )
+                        }
                       >
                         Excluir
                       </button>
@@ -1555,38 +1643,47 @@ export default function AdminPanel({
     );
   }
 
-  const content = {
-    overview: renderOverview,
-    customers: renderCustomers,
-    products: renderProducts,
-    promos: renderPromos,
-    orders: renderOrders,
-    checkins: renderCheckins,
-    settings: renderSettings,
-    team: renderTeam,
-  };
+  function renderActiveTab() {
+    switch (activeTab) {
+      case "overview":
+        return renderOverview();
+      case "customers":
+        return renderCustomers();
+      case "products":
+        return renderProducts();
+      case "promos":
+        return renderPromos();
+      case "orders":
+        return renderOrders();
+      case "checkins":
+        return renderCheckins();
+      case "settings":
+        return renderSettings();
+      case "team":
+        return renderTeam();
+      default:
+        return renderOverview();
+    }
+  }
 
   return (
-    <div
-      style={{
-        ...styles.page,
-        gridTemplateColumns: isNarrow ? "1fr" : "250px minmax(0, 1fr)",
-      }}
-    >
-      <aside
-        style={{
-          ...styles.sidebar,
-          position: isNarrow ? "static" : "sticky",
-          top: isNarrow ? "auto" : 0,
-          height: isNarrow ? "auto" : "100vh",
-        }}
-      >
-        <div style={styles.sidebarBrand}>
-          <div style={styles.brandMark}>V</div>
+    <div style={styles.page}>
+      <aside style={styles.sidebar}>
+        <div style={styles.brandBlock}>
+          <div style={styles.logoBubble}>
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt="Logo da loja" style={styles.logoImage} />
+            ) : (
+              <span style={styles.logoFallback}>V</span>
+            )}
+          </div>
+
           <div>
-            <strong style={styles.brandEyebrow}>{branding.softwareName || "VOLTTA"}</strong>
+            <p style={styles.eyebrow}>{branding.softwareName || "Voltta"}</p>
             <h1 style={styles.brandTitle}>{branding.companyName || "Minha Loja"}</h1>
-            <p style={styles.brandSubtitle}>Painel da operação da loja</p>
+            <p style={styles.brandSubtitle}>
+              {branding.welcomePhrase || "Painel da operação da loja"}
+            </p>
           </div>
         </div>
 
@@ -1597,11 +1694,11 @@ export default function AdminPanel({
               <button
                 key={tab.id}
                 type="button"
+                onClick={() => setActiveTab(tab.id)}
                 style={{
                   ...styles.navButton,
                   ...(active ? styles.navButtonActive : {}),
                 }}
-                onClick={() => setActiveTab(tab.id)}
               >
                 {tab.label}
               </button>
@@ -1614,7 +1711,7 @@ export default function AdminPanel({
             Voltar
           </button>
           <button type="button" style={styles.primaryButtonWide} onClick={onLogout}>
-            Sair
+            Sair do painel
           </button>
         </div>
       </aside>
@@ -1624,14 +1721,16 @@ export default function AdminPanel({
           <div
             style={{
               ...styles.notice,
-              ...(notice.type === "error" ? styles.noticeError : styles.noticeSuccess),
+              background: notice.type === "error" ? "#fff0f4" : "#edf8f1",
+              borderColor: notice.type === "error" ? "#f2cada" : "#cfe9d8",
+              color: notice.type === "error" ? danger : success,
             }}
           >
             {notice.text}
           </div>
         ) : null}
 
-        {content[activeTab]?.()}
+        {renderActiveTab()}
       </main>
     </div>
   );
@@ -1641,26 +1740,13 @@ function Card({ children }) {
   return <section style={styles.card}>{children}</section>;
 }
 
-function Field({ label, full = false, children }) {
+function Field({ label, children, full = false }) {
   return (
-    <label style={full ? { ...styles.field, ...styles.fieldFull } : styles.field}>
+    <label style={{ ...styles.field, ...(full ? styles.fieldFull : {}) }}>
       <span style={styles.label}>{label}</span>
       {children}
     </label>
   );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>{label}</span>
-      <strong style={styles.infoValue}>{value}</strong>
-    </div>
-  );
-}
-
-function EmptyState({ text }) {
-  return <div style={styles.emptyState}>{text}</div>;
 }
 
 function StatCard({ label, value, helper, highlight = false }) {
@@ -1668,14 +1754,37 @@ function StatCard({ label, value, helper, highlight = false }) {
     <div
       style={{
         ...styles.statCard,
-        ...(highlight ? styles.statCardHighlight : {}),
+        ...(highlight
+          ? {
+              background: "linear-gradient(135deg, #6f3cc3 0%, #8d67d6 100%)",
+              color: white,
+              borderColor: "transparent",
+            }
+          : {}),
       }}
     >
-      <span style={styles.statLabel}>{label}</span>
+      <p style={{ ...styles.statLabel, ...(highlight ? { color: "rgba(255,255,255,0.82)" } : {}) }}>
+        {label}
+      </p>
       <strong style={styles.statValue}>{value}</strong>
-      <small style={styles.statHelper}>{helper}</small>
+      <p style={{ ...styles.statHelper, ...(highlight ? { color: "rgba(255,255,255,0.76)" } : {}) }}>
+        {helper}
+      </p>
     </div>
   );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{String(value ?? "-")}</strong>
+    </div>
+  );
+}
+
+function EmptyState({ text }) {
+  return <div style={styles.emptyState}>{text}</div>;
 }
 
 function QuickActionButton({ label, onClick }) {
@@ -1696,26 +1805,30 @@ function formatCurrency(value) {
 function formatDate(value, withTime = false) {
   if (!value) return "-";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  return date.toLocaleString("pt-BR", {
-    dateStyle: "short",
-    ...(withTime ? { timeStyle: "short" } : {}),
-  });
+  try {
+    return new Date(value).toLocaleString("pt-BR", {
+      dateStyle: "short",
+      ...(withTime ? { timeStyle: "short" } : {}),
+    });
+  } catch {
+    return "-";
+  }
 }
 
 function getTwoColsStyle(isNarrow) {
   return {
-    ...styles.twoCols,
-    gridTemplateColumns: isNarrow ? "1fr" : "minmax(0, 1.15fr) minmax(320px, 0.85fr)",
+    display: "grid",
+    gridTemplateColumns: isNarrow ? "1fr" : "1.1fr 0.9fr",
+    gap: 18,
   };
 }
 
 function getFormGridStyle(isNarrow) {
   return {
-    ...styles.formGrid,
+    display: "grid",
     gridTemplateColumns: isNarrow ? "1fr" : "repeat(2, minmax(0, 1fr))",
+    gap: 16,
+    alignItems: "start",
   };
 }
 
@@ -1723,142 +1836,136 @@ const styles = {
   page: {
     minHeight: "100vh",
     display: "grid",
-    background:
-      "radial-gradient(circle at top left, rgba(255,255,255,0.96) 0, rgba(255,255,255,0) 22%), linear-gradient(180deg, #fcfbfe 0%, #f5f1fb 100%)",
+    gridTemplateColumns: "290px 1fr",
+    background: bg,
     color: ink,
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
   },
 
   sidebar: {
-    background: "linear-gradient(180deg, #34154f 0%, #472368 100%)",
+    background: "linear-gradient(180deg, #2f1c46 0%, #3e255d 100%)",
     color: white,
-    padding: 20,
-    display: "grid",
-    gap: 20,
-    alignContent: "start",
-    borderRight: "1px solid rgba(255,255,255,0.08)",
-    zIndex: 2,
-  },
-
-  sidebarBrand: {
+    padding: 24,
     display: "flex",
-    alignItems: "center",
-    gap: 14,
+    flexDirection: "column",
+    gap: 24,
+    borderRight: "1px solid rgba(255,255,255,0.08)",
   },
 
-  brandMark: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+  brandBlock: {
+    display: "flex",
+    gap: 14,
+    alignItems: "flex-start",
+  },
+
+  logoBubble: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    background: "rgba(255,255,255,0.14)",
     display: "grid",
     placeItems: "center",
-    background: "rgba(255,255,255,0.14)",
-    color: white,
-    fontWeight: 900,
-    fontSize: 22,
+    overflow: "hidden",
     flexShrink: 0,
   },
 
-  brandEyebrow: {
-    display: "block",
+  logoImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+
+  logoFallback: {
+    fontSize: 22,
+    fontWeight: 900,
+    color: white,
+  },
+
+  eyebrow: {
+    margin: 0,
     fontSize: 12,
-    opacity: 0.78,
-    letterSpacing: 1,
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
+    color: "rgba(255,255,255,0.68)",
   },
 
   brandTitle: {
     margin: "4px 0 6px",
-    fontSize: 18,
-    lineHeight: 1.15,
+    fontSize: 22,
+    lineHeight: 1.1,
   },
 
   brandSubtitle: {
     margin: 0,
-    fontSize: 14,
     color: "rgba(255,255,255,0.78)",
+    fontSize: 13,
     lineHeight: 1.5,
   },
 
   nav: {
     display: "grid",
-    gap: 10,
+    gap: 8,
   },
 
   navButton: {
     border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 18,
+    background: "transparent",
+    color: "rgba(255,255,255,0.86)",
+    borderRadius: 16,
     padding: "14px 16px",
-    background: "rgba(255,255,255,0.04)",
-    color: white,
     textAlign: "left",
     fontWeight: 700,
     cursor: "pointer",
+    transition: "0.2s ease",
   },
 
   navButtonActive: {
-    background: "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.1) 100%)",
-    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.18)",
+    color: white,
   },
 
   sidebarFooter: {
+    marginTop: "auto",
     display: "grid",
     gap: 10,
-    marginTop: 8,
   },
 
   main: {
-    padding: "24px clamp(16px, 2vw, 28px)",
+    padding: 28,
     display: "grid",
-    gap: 20,
+    gap: 18,
     alignContent: "start",
-    minWidth: 0,
-    overflowX: "hidden",
   },
 
   notice: {
+    border: "1px solid",
     borderRadius: 16,
-    padding: "14px 18px",
+    padding: "14px 16px",
     fontWeight: 700,
-    fontSize: 15,
-  },
-
-  noticeError: {
-    background: "#fff1f4",
-    border: "1px solid #f2cfd8",
-    color: "#b24361",
-  },
-
-  noticeSuccess: {
-    background: "#eefaf2",
-    border: "1px solid #cfe6d6",
-    color: success,
   },
 
   stack: {
     display: "grid",
-    gap: 20,
-    minWidth: 0,
+    gap: 18,
   },
 
   sectionHeading: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 12,
   },
 
   sectionTitle: {
     margin: 0,
-    fontSize: "clamp(28px, 3vw, 40px)",
-    lineHeight: 1.05,
+    fontSize: 28,
     color: ink,
   },
 
   sectionSubtitle: {
-    margin: "8px 0 0",
+    margin: "6px 0 0",
     color: muted,
-    fontSize: 16,
-    lineHeight: 1.5,
+    fontSize: 15,
   },
 
   statsGrid: {
@@ -1869,40 +1976,29 @@ const styles = {
   statCard: {
     background: white,
     border: `1px solid ${border}`,
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 18,
-    display: "grid",
-    gap: 8,
-    minWidth: 0,
-    boxShadow: "0 14px 34px rgba(77, 41, 112, 0.06)",
-  },
-
-  statCardHighlight: {
-    background: "#f8f2ff",
+    boxShadow: "0 18px 42px rgba(90, 54, 119, 0.08)",
   },
 
   statLabel: {
+    margin: 0,
     color: muted,
     fontSize: 13,
     fontWeight: 700,
   },
 
   statValue: {
-    color: ink,
+    display: "block",
+    marginTop: 10,
     fontSize: 28,
-    lineHeight: 1,
+    lineHeight: 1.1,
   },
 
   statHelper: {
+    margin: "8px 0 0",
     color: muted,
     fontSize: 13,
-  },
-
-  twoCols: {
-    display: "grid",
-    gap: 20,
-    alignItems: "start",
-    minWidth: 0,
   },
 
   card: {
@@ -1910,22 +2006,20 @@ const styles = {
     border: `1px solid ${border}`,
     borderRadius: 24,
     padding: 22,
-    boxShadow: "0 14px 34px rgba(77, 41, 112, 0.07)",
-    minWidth: 0,
-    overflow: "hidden",
+    boxShadow: "0 20px 48px rgba(90, 54, 119, 0.08)",
+    display: "grid",
+    gap: 16,
   },
 
   cardTitle: {
-    margin: "0 0 16px",
-    fontSize: 20,
+    margin: 0,
+    fontSize: 22,
     color: ink,
   },
 
   formGrid: {
     display: "grid",
     gap: 16,
-    alignItems: "start",
-    minWidth: 0,
   },
 
   field: {
@@ -1939,184 +2033,132 @@ const styles = {
   },
 
   label: {
-    fontSize: 13,
-    color: muted,
+    fontSize: 14,
     fontWeight: 700,
+    color: muted,
   },
 
   input: {
     width: "100%",
     minWidth: 0,
-    height: 48,
+    height: 56,
+    borderRadius: 16,
     border: `1px solid ${border}`,
-    borderRadius: 14,
-    padding: "0 14px",
-    background: "#fcfbfe",
+    background: "#fbf9ff",
+    padding: "0 16px",
+    fontSize: 15,
     color: ink,
     outline: "none",
-    fontSize: 14,
-    lineHeight: 1.2,
-    boxSizing: "border-box",
   },
 
   textarea: {
     width: "100%",
     minWidth: 0,
     minHeight: 110,
-    resize: "vertical",
+    borderRadius: 16,
     border: `1px solid ${border}`,
-    borderRadius: 14,
-    padding: "12px 14px",
-    background: "#fcfbfe",
+    background: "#fbf9ff",
+    padding: 16,
+    fontSize: 15,
     color: ink,
     outline: "none",
-    fontSize: 14,
-    lineHeight: 1.5,
+    resize: "vertical",
     fontFamily: "inherit",
-    boxSizing: "border-box",
-  },
-
-  actionsRowFull: {
-    gridColumn: "1 / -1",
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-    marginTop: 4,
   },
 
   primaryButton: {
-    border: 0,
-    borderRadius: 14,
-    padding: "12px 18px",
+    height: 52,
+    border: "none",
+    borderRadius: 16,
     background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
     color: white,
+    fontSize: 15,
     fontWeight: 800,
     cursor: "pointer",
+    padding: "0 18px",
+  },
+
+  secondaryButton: {
+    height: 52,
+    borderRadius: 16,
+    border: `1px solid ${border}`,
+    background: "#faf7ff",
+    color: ink,
+    fontSize: 15,
+    fontWeight: 700,
+    cursor: "pointer",
+    padding: "0 18px",
   },
 
   primaryButtonWide: {
-    border: 0,
-    borderRadius: 14,
-    padding: "12px 18px",
+    height: 52,
+    border: "none",
+    borderRadius: 16,
     background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`,
     color: white,
+    fontSize: 15,
     fontWeight: 800,
     cursor: "pointer",
     width: "100%",
   },
 
-  secondaryButton: {
-    border: `1px solid ${border}`,
-    borderRadius: 14,
-    padding: "12px 18px",
-    background: "#faf7fe",
-    color: ink,
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-
   secondaryButtonWide: {
-    border: "1px solid rgba(255,255,255,0.16)",
-    borderRadius: 14,
-    padding: "12px 18px",
-    background: "rgba(255,255,255,0.06)",
+    height: 52,
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.08)",
     color: white,
+    fontSize: 15,
     fontWeight: 700,
     cursor: "pointer",
     width: "100%",
   },
 
   ghostButton: {
+    height: 42,
+    borderRadius: 14,
     border: `1px solid ${border}`,
-    borderRadius: 12,
-    padding: "9px 12px",
-    background: white,
+    background: "#ffffff",
     color: ink,
+    fontSize: 14,
     fontWeight: 700,
     cursor: "pointer",
+    padding: "0 14px",
   },
 
   dangerButton: {
-    border: 0,
-    borderRadius: 12,
-    padding: "9px 12px",
-    background: "#fff1f4",
+    height: 42,
+    borderRadius: 14,
+    border: "1px solid #f0ccd7",
+    background: "#fff4f7",
     color: danger,
-    fontWeight: 800,
+    fontSize: 14,
+    fontWeight: 700,
     cursor: "pointer",
+    padding: "0 14px",
   },
 
   linkButton: {
+    height: 52,
+    borderRadius: 16,
+    border: `1px solid ${border}`,
+    background: "#ffffff",
+    color: accent,
+    fontSize: 15,
+    fontWeight: 800,
+    cursor: "pointer",
+    padding: "0 18px",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
-    padding: "12px 18px",
-    background: "#edf6ff",
-    color: "#2461b1",
-    fontWeight: 800,
     textDecoration: "none",
   },
 
-  listHeader: {
+  actionsRowFull: {
+    gridColumn: "1 / -1",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexWrap: "wrap",
     gap: 12,
-    marginBottom: 8,
-    flexWrap: "wrap",
-  },
-
-  miniBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    padding: "8px 12px",
-    background: "#f3ecfb",
-    color: accentDark,
-    fontSize: 12,
-    fontWeight: 800,
-  },
-
-  tableWrap: {
-    overflowX: "auto",
-    minWidth: 0,
-  },
-
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    minWidth: 720,
-  },
-
-  th: {
-    textAlign: "left",
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    color: muted,
-    padding: "14px 12px",
-    borderBottom: `1px solid ${border}`,
-    whiteSpace: "nowrap",
-  },
-
-  td: {
-    padding: "14px 12px",
-    borderBottom: "1px solid #f1ebf8",
-    verticalAlign: "top",
-    fontSize: 14,
-    color: ink,
-  },
-
-  selectedRow: {
-    background: "#faf7fe",
-  },
-
-  inlineActions: {
-    display: "flex",
-    gap: 8,
-    flexWrap: "wrap",
   },
 
   infoList: {
@@ -2128,9 +2170,8 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     gap: 12,
-    alignItems: "center",
-    borderBottom: "1px solid #f1ebf8",
-    paddingBottom: 10,
+    padding: "12px 0",
+    borderBottom: `1px solid ${border}`,
   },
 
   infoLabel: {
@@ -2144,46 +2185,105 @@ const styles = {
     textAlign: "right",
   },
 
-  emptyState: {
-    border: `1px dashed ${border}`,
-    borderRadius: 18,
-    padding: 22,
-    textAlign: "center",
-    color: muted,
-    background: "#fcfbfe",
-  },
-
   quickActions: {
     display: "grid",
-    gap: 10,
+    gap: 12,
   },
 
   quickButton: {
-    border: `1px solid ${border}`,
+    minHeight: 52,
     borderRadius: 16,
-    padding: "14px 16px",
-    background: "#faf7fe",
+    border: `1px solid ${border}`,
+    background: "#faf7ff",
     color: ink,
-    fontWeight: 800,
-    textAlign: "left",
+    fontWeight: 700,
+    fontSize: 15,
     cursor: "pointer",
+    textAlign: "left",
+    padding: "0 16px",
+  },
+
+  listHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+
+  miniBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 34,
+    padding: "0 12px",
+    borderRadius: 999,
+    background: "#f3edfd",
+    color: accent,
+    fontWeight: 800,
+    fontSize: 13,
+  },
+
+  tableWrap: {
+    overflowX: "auto",
+  },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+
+  th: {
+    textAlign: "left",
+    padding: "14px 12px",
+    fontSize: 13,
+    color: muted,
+    borderBottom: `1px solid ${border}`,
+    whiteSpace: "nowrap",
+  },
+
+  td: {
+    padding: "14px 12px",
+    fontSize: 14,
+    color: ink,
+    borderBottom: `1px solid ${border}`,
+    verticalAlign: "top",
+  },
+
+  selectedRow: {
+    background: "#fbf8ff",
+  },
+
+  inlineActions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: 32,
+    padding: "0 12px",
+    borderRadius: 999,
+    fontSize: 13,
+    fontWeight: 800,
   },
 
   promoGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
     gap: 14,
   },
 
   promoCard: {
     border: `1px solid ${border}`,
     borderRadius: 20,
-    background: "#fcfbfe",
-    overflow: "hidden",
+    background: "#fbf9ff",
+    padding: 18,
   },
 
   promoContent: {
-    padding: 18,
     display: "grid",
     gap: 12,
   },
@@ -2196,13 +2296,14 @@ const styles = {
 
   promoTag: {
     display: "inline-flex",
+    minHeight: 30,
     alignItems: "center",
+    padding: "0 10px",
     borderRadius: 999,
-    padding: "7px 10px",
     background: "#efe7fb",
-    color: accentDark,
-    fontSize: 12,
+    color: accent,
     fontWeight: 800,
+    fontSize: 12,
   },
 
   promoTitle: {
@@ -2215,16 +2316,7 @@ const styles = {
     margin: 0,
     color: muted,
     fontSize: 14,
-    lineHeight: 1.6,
-  },
-
-  statusBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    borderRadius: 999,
-    padding: "8px 10px",
-    fontSize: 12,
-    fontWeight: 800,
+    lineHeight: 1.55,
   },
 
   checkinList: {
@@ -2236,10 +2328,10 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     gap: 16,
-    border: `1px solid ${border}`,
-    borderRadius: 18,
     padding: 18,
-    background: "#fcfbfe",
+    borderRadius: 18,
+    border: `1px solid ${border}`,
+    background: "#fbf9ff",
   },
 
   checkinName: {
@@ -2259,14 +2351,20 @@ const styles = {
   },
 
   teamCard: {
-    border: `1px solid ${border}`,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 16,
+    padding: 18,
     borderRadius: 18,
-    background: "#fcfbfe",
-    padding: 16,
+    border: `1px solid ${border}`,
+    background: "#fbf9ff",
+    flexWrap: "wrap",
+  },
+
+  teamInfo: {
     display: "grid",
-    alignItems: "center",
-    gap: 12,
-    minWidth: 0,
+    gap: 6,
   },
 
   teamName: {
@@ -2275,9 +2373,20 @@ const styles = {
   },
 
   teamMeta: {
-    margin: "5px 0 0",
+    margin: 0,
     color: muted,
     fontSize: 14,
-    wordBreak: "break-word",
+  },
+
+  emptyState: {
+    minHeight: 120,
+    display: "grid",
+    placeItems: "center",
+    textAlign: "center",
+    color: muted,
+    border: `1px dashed ${border}`,
+    borderRadius: 18,
+    background: "#fbf9ff",
+    padding: 18,
   },
 };

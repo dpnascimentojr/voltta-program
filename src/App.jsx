@@ -119,6 +119,11 @@ const initialStaffUsers = [
     login: "admin",
     role: "Administrador",
     password: "123456",
+    email: "admin@minhaloja.com",
+    phone: "(75) 99999-1111",
+    cpf: "",
+    status: "Ativo",
+    notes: "Usuário principal da operação.",
     createdAt: new Date().toISOString(),
   },
 ];
@@ -138,6 +143,10 @@ function readStorage(key, fallback) {
 
 export default function App() {
   const [screen, setScreen] = useState("access");
+  const [adminAuth, setAdminAuth] = useState({
+    isAuthenticated: false,
+    user: null,
+  });
 
   const [config, setConfig] = useState(() =>
     readStorage(STORAGE_KEYS.config, initialConfig)
@@ -213,9 +222,52 @@ export default function App() {
   }, [customerWithPromos, config]);
 
   const handleEnterCustomer = () => setScreen("customer");
-  const handleEnterAdmin = () => setScreen("admin");
-  const handleBackToAccess = () => setScreen("access");
-  const handleLogout = () => setScreen("access");
+  const handleBackToAccess = () => {
+    setScreen("access");
+  };
+
+  const handleLogout = () => {
+    setAdminAuth({
+      isAuthenticated: false,
+      user: null,
+    });
+    setScreen("access");
+  };
+
+  const handleAdminLogin = async ({ login, password }) => {
+    const normalizedLogin = String(login || "")
+      .trim()
+      .toLowerCase();
+    const normalizedPassword = String(password || "").trim();
+
+    if (!normalizedLogin || !normalizedPassword) {
+      throw new Error("Informe login e senha para acessar o painel.");
+    }
+
+    const foundUser = staffUsers.find((user) => {
+      const userLogin = String(user.login || "")
+        .trim()
+        .toLowerCase();
+      const userPassword = String(user.password || "").trim();
+      const userStatus = String(user.status || "Ativo").trim().toLowerCase();
+
+      return (
+        userLogin === normalizedLogin &&
+        userPassword === normalizedPassword &&
+        userStatus === "ativo"
+      );
+    });
+
+    if (!foundUser) {
+      throw new Error("Login, senha ou status do usuário inválido.");
+    }
+
+    setAdminAuth({
+      isAuthenticated: true,
+      user: foundUser,
+    });
+    setScreen("admin");
+  };
 
   const handleSelectCustomer = (customerId) => {
     setSelectedCustomerId(customerId);
@@ -420,6 +472,11 @@ export default function App() {
     const login = String(payload.login || "").trim();
     const role = String(payload.role || "Funcionário").trim();
     const password = String(payload.password || "").trim();
+    const email = String(payload.email || "").trim();
+    const phone = String(payload.phone || "").trim();
+    const cpf = String(payload.cpf || "").trim();
+    const status = String(payload.status || "Ativo").trim();
+    const notes = String(payload.notes || "").trim();
 
     if (!name || !login || !password) {
       throw new Error("Preencha nome, login e senha da equipe.");
@@ -439,14 +496,97 @@ export default function App() {
       login,
       role,
       password,
+      email,
+      phone,
+      cpf,
+      status,
+      notes,
       createdAt: new Date().toISOString(),
     };
 
     setStaffUsers((prev) => [newUser, ...prev]);
   };
 
+  const handleUpdateStaffUser = async (payload) => {
+    const name = String(payload.name || "").trim();
+    const login = String(payload.login || "").trim();
+    const role = String(payload.role || "Funcionário").trim();
+    const password = String(payload.password || "").trim();
+    const email = String(payload.email || "").trim();
+    const phone = String(payload.phone || "").trim();
+    const cpf = String(payload.cpf || "").trim();
+    const status = String(payload.status || "Ativo").trim();
+    const notes = String(payload.notes || "").trim();
+
+    if (!payload.id) {
+      throw new Error("Funcionário inválido para edição.");
+    }
+
+    if (!name || !login || !password) {
+      throw new Error("Preencha nome, login e senha da equipe.");
+    }
+
+    const duplicatedLogin = staffUsers.some((user) => {
+      const sameLogin =
+        String(user.login || "").trim().toLowerCase() === login.toLowerCase();
+      return sameLogin && user.id !== payload.id;
+    });
+
+    if (duplicatedLogin) {
+      throw new Error("Já existe outro usuário com esse login.");
+    }
+
+    setStaffUsers((prev) =>
+      prev.map((user) =>
+        user.id === payload.id
+          ? {
+              ...user,
+              name,
+              login,
+              role,
+              password,
+              email,
+              phone,
+              cpf,
+              status,
+              notes,
+            }
+          : user
+      )
+    );
+
+    setAdminAuth((prev) => {
+      if (!prev.user || prev.user.id !== payload.id) return prev;
+      return {
+        ...prev,
+        user: {
+          ...prev.user,
+          name,
+          login,
+          role,
+          password,
+          email,
+          phone,
+          cpf,
+          status,
+          notes,
+        },
+      };
+    });
+  };
+
   const handleDeleteStaffUser = async (userId) => {
+    const deletingCurrentUser = adminAuth.user?.id === userId;
+
     setStaffUsers((prev) => prev.filter((user) => user.id !== userId));
+
+    if (deletingCurrentUser) {
+      setAdminAuth({
+        isAuthenticated: false,
+        user: null,
+      });
+      setScreen("access");
+    }
   };
 
   const handleCustomerCheckin = () => {
@@ -493,6 +633,11 @@ export default function App() {
   const pendingCheckins = [];
 
   if (screen === "admin") {
+    if (!adminAuth.isAuthenticated) {
+      setScreen("access");
+      return null;
+    }
+
     return (
       <AdminPanel
         onBack={handleBackToAccess}
@@ -521,9 +666,11 @@ export default function App() {
         onAddBonus={handleAddBonus}
         onSaveConfig={handleSaveConfig}
         onAddStaffUser={handleAddStaffUser}
+        onUpdateStaffUser={handleUpdateStaffUser}
         onDeleteStaffUser={handleDeleteStaffUser}
         branding={branding}
         whatsappLink={whatsappLink}
+        currentAdminUser={adminAuth.user}
       />
     );
   }
@@ -550,7 +697,7 @@ export default function App() {
     <div style={styles.appShell}>
       <AccessHubScreen
         onCustomerEnter={handleEnterCustomer}
-        onEmployeeEnter={handleEnterAdmin}
+        onAdminLogin={handleAdminLogin}
         branding={branding}
       />
     </div>

@@ -1,438 +1,373 @@
-import { useEffect, useMemo, useState } from "react";
-
-function digitsOnly(value = "") {
-  return String(value).replace(/\D/g, "");
-}
-
-function formatPhone(value = "") {
-  const digits = digitsOnly(value).slice(0, 11);
-  if (!digits) return "";
-  if (digits.length <= 2) return `(${digits}`;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length === 10) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  }
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-}
-
-function useIsMobile(breakpoint = 860) {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= breakpoint);
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= breakpoint);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [breakpoint]);
-
-  return isMobile;
-}
+import { useState } from "react";
 
 export default function AccessHubScreen({
-  branding,
-  customers = [],
-  onCustomerLogin,
-  onEmployeeEnter,
-  whatsappLink,
+  onCustomerEnter,
+  onAdminLogin,
+  branding = {},
 }) {
-  const isMobile = useIsMobile();
-  const [phone, setPhone] = useState("");
-  const [pin, setPin] = useState("");
-  const [showRecovery, setShowRecovery] = useState(false);
-  const [notice, setNotice] = useState({ type: "", text: "" });
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerPin, setCustomerPin] = useState("");
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminForm, setAdminForm] = useState({
+    login: "",
+    password: "",
+  });
+  const [adminError, setAdminError] = useState("");
+  const [adminBusy, setAdminBusy] = useState(false);
 
-  const matchedCustomer = useMemo(() => {
-    const normalized = digitsOnly(phone);
-    if (!normalized) return null;
-    return customers.find((customer) => digitsOnly(customer.phone) === normalized) || null;
-  }, [phone, customers]);
-
-  function handleSubmit(event) {
+  async function handleAdminSubmit(event) {
     event.preventDefault();
-    setNotice({ type: "", text: "" });
+    setAdminError("");
 
     try {
-      onCustomerLogin({ phone, pin });
+      setAdminBusy(true);
+      await onAdminLogin?.(adminForm);
     } catch (error) {
-      setNotice({
-        type: "error",
-        text: error?.message || "Não foi possível entrar na conta.",
-      });
+      setAdminError(error?.message || "Não foi possível entrar no painel.");
+    } finally {
+      setAdminBusy(false);
     }
   }
 
-  const emailRecovery = matchedCustomer?.email
-    ? `mailto:${matchedCustomer.email}?subject=${encodeURIComponent("Recuperação de acesso - app Savana")}`
-    : "";
-
   return (
-    <div style={styles.page(isMobile)}>
-      <div style={styles.content(isMobile)}>
-        <section style={styles.heroCard(isMobile)}>
-          <div style={styles.brandBadge}>{branding?.softwareName || "Voltta"}</div>
-
-          <div>
-            <h1 style={styles.heroTitle(isMobile)}>
-              Fidelidade elegante, prática e feita para voltar sempre.
-            </h1>
-
-            <p style={styles.heroText(isMobile)}>
-              Entre com seu telefone e PIN para acompanhar pontos, cupons, promoções e benefícios da{" "}
-              {branding?.companyName || "loja"}.
-            </p>
+    <div style={styles.page}>
+      <div style={styles.shell}>
+        <section style={styles.heroCard}>
+          <div style={styles.badge}>
+            {branding.softwareName || "Clube Base"}
           </div>
 
-          <div style={styles.heroHighlights(isMobile)}>
-            <Badge text="Promoções vivas" />
-            <Badge text="Cupons ativos" />
-            <Badge text="Check-in premiado" />
+          <h1 style={styles.heroTitle}>
+            Fidelidade elegante, prática e feita para voltar sempre.
+          </h1>
+
+          <p style={styles.heroText}>
+            Entre com seu telefone e PIN para acompanhar pontos, cupons,
+            promoções e histórico. A loja acessa o painel por login interno.
+          </p>
+
+          <div style={styles.heroInfo}>
+            <div style={styles.heroInfoItem}>
+              <span style={styles.heroInfoLabel}>Loja</span>
+              <strong style={styles.heroInfoValue}>
+                {branding.companyName || "Minha Loja"}
+              </strong>
+            </div>
+
+            <div style={styles.heroInfoItem}>
+              <span style={styles.heroInfoLabel}>Experiência</span>
+              <strong style={styles.heroInfoValue}>
+                Cliente e operação no mesmo sistema
+              </strong>
+            </div>
           </div>
         </section>
 
-        <section style={styles.loginCard(isMobile)}>
-          <div style={styles.cardHeader(isMobile)}>
-            <div>
+        <section style={styles.formCard}>
+          {!showAdminLogin ? (
+            <>
               <p style={styles.eyebrow}>Área do cliente</p>
-              <h2 style={styles.cardTitle(isMobile)}>Entrar na sua conta</h2>
-            </div>
-          </div>
+              <h2 style={styles.title}>Entrar na sua conta</h2>
 
-          {notice.text ? (
-            <div
-              style={{
-                ...styles.notice,
-                background: notice.type === "error" ? "#fff0f3" : "#edf8f1",
-                color: notice.type === "error" ? "#be395d" : "#2f8f57",
-                borderColor: notice.type === "error" ? "#f4ccd7" : "#cde7d7",
-              }}
-            >
-              {notice.text}
-            </div>
-          ) : null}
+              <div style={styles.formGrid}>
+                <label style={styles.field}>
+                  <span style={styles.label}>Telefone</span>
+                  <input
+                    style={styles.input}
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="(00) 12345-6789"
+                  />
+                </label>
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <label style={styles.field}>
-              <span style={styles.label}>Telefone</span>
-              <input
-                style={styles.input}
-                value={phone}
-                onChange={(e) => setPhone(formatPhone(e.target.value))}
-                inputMode="numeric"
-                placeholder="(00) 12345-6789"
-              />
-            </label>
+                <label style={styles.field}>
+                  <span style={styles.label}>PIN</span>
+                  <input
+                    style={styles.input}
+                    value={customerPin}
+                    onChange={(e) => setCustomerPin(e.target.value)}
+                    placeholder="Seu PIN"
+                    type="password"
+                  />
+                </label>
 
-            <label style={styles.field}>
-              <span style={styles.label}>PIN</span>
-              <input
-                style={styles.input}
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                inputMode="numeric"
-                placeholder="Seu PIN"
-              />
-            </label>
+                <button type="button" style={styles.primaryButton} onClick={onCustomerEnter}>
+                  Entrar na área do cliente
+                </button>
 
-            <button type="submit" style={styles.primaryButton}>
-              Entrar na área do cliente
-            </button>
-          </form>
+                <button type="button" style={styles.linkButton}>
+                  Recuperar acesso
+                </button>
 
-          <div style={styles.recoveryBox}>
-            <button
-              type="button"
-              style={styles.linkButton}
-              onClick={() => setShowRecovery((prev) => !prev)}
-            >
-              Recuperar acesso
-            </button>
+                <div style={styles.divider} />
 
-            {showRecovery ? (
-              <div style={styles.recoveryPanel(isMobile)}>
-                <p style={styles.recoveryText}>
-                  Digite seu telefone acima para localizar sua conta e escolher a melhor forma de
-                  recuperação.
-                </p>
-
-                <div style={styles.recoveryActions(isMobile)}>
-                  <a
-                    href={whatsappLink || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={styles.secondaryAction(isMobile)}
-                  >
-                    Recuperar por WhatsApp
-                  </a>
-
-                  <a
-                    href={emailRecovery || "#"}
-                    style={{
-                      ...styles.secondaryAction(isMobile),
-                      opacity: emailRecovery ? 1 : 0.48,
-                      pointerEvents: emailRecovery ? "auto" : "none",
-                    }}
-                  >
-                    Recuperar por e-mail
-                  </a>
-                </div>
-
-                {matchedCustomer?.email ? (
-                  <p style={styles.helperText}>
-                    Conta encontrada com e-mail vinculado: {matchedCustomer.email}
-                  </p>
-                ) : (
-                  <p style={styles.helperText}>
-                    Se não houver e-mail cadastrado, use o WhatsApp da loja para recuperar.
-                  </p>
-                )}
+                <button
+                  type="button"
+                  style={styles.secondaryButton}
+                  onClick={() => {
+                    setShowAdminLogin(true);
+                    setAdminError("");
+                  }}
+                >
+                  Entrar no painel da loja
+                </button>
               </div>
-            ) : null}
-          </div>
+            </>
+          ) : (
+            <>
+              <p style={styles.eyebrow}>Painel da loja</p>
+              <h2 style={styles.title}>Login da equipe</h2>
+              <p style={styles.subtitle}>
+                Use o login cadastrado no painel administrativo para acessar a operação.
+              </p>
 
-          <div style={styles.divider} />
+              <form onSubmit={handleAdminSubmit} style={styles.formGrid}>
+                <label style={styles.field}>
+                  <span style={styles.label}>Login</span>
+                  <input
+                    style={styles.input}
+                    value={adminForm.login}
+                    onChange={(e) =>
+                      setAdminForm((prev) => ({ ...prev, login: e.target.value }))
+                    }
+                    placeholder="Seu login"
+                  />
+                </label>
 
-          <button type="button" style={styles.employeeButton} onClick={onEmployeeEnter}>
-            Entrar no painel da loja
-          </button>
+                <label style={styles.field}>
+                  <span style={styles.label}>Senha</span>
+                  <input
+                    style={styles.input}
+                    value={adminForm.password}
+                    onChange={(e) =>
+                      setAdminForm((prev) => ({ ...prev, password: e.target.value }))
+                    }
+                    placeholder="Sua senha"
+                    type="password"
+                  />
+                </label>
+
+                {adminError ? <div style={styles.errorBox}>{adminError}</div> : null}
+
+                <button type="submit" style={styles.primaryButton} disabled={adminBusy}>
+                  {adminBusy ? "Entrando..." : "Entrar no painel"}
+                </button>
+
+                <button
+                  type="button"
+                  style={styles.secondaryButton}
+                  onClick={() => {
+                    setShowAdminLogin(false);
+                    setAdminError("");
+                    setAdminForm({ login: "", password: "" });
+                  }}
+                >
+                  Voltar para acesso do cliente
+                </button>
+              </form>
+            </>
+          )}
         </section>
       </div>
     </div>
   );
 }
 
-function Badge({ text }) {
-  return <span style={styles.badge}>{text}</span>;
-}
-
 const styles = {
-  page: (isMobile) => ({
+  page: {
     minHeight: "100vh",
     display: "grid",
     placeItems: "center",
-    padding: isMobile ? 14 : 24,
-  }),
+    padding: "28px",
+  },
 
-  content: (isMobile) => ({
+  shell: {
     width: "100%",
-    maxWidth: 1160,
+    maxWidth: "1220px",
     display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "1.08fr 0.92fr",
-    gap: isMobile ? 14 : 24,
+    gridTemplateColumns: "1.1fr 0.9fr",
+    gap: "26px",
     alignItems: "stretch",
-  }),
+  },
 
-  heroCard: (isMobile) => ({
-    background: "linear-gradient(135deg, #3e255d 0%, #6f3cc3 100%)",
+  heroCard: {
+    minHeight: "720px",
+    borderRadius: "34px",
+    padding: "42px 36px",
+    background:
+      "linear-gradient(180deg, #4d2a7d 0%, #5e34a3 48%, #7047be 100%)",
     color: "#fff",
-    borderRadius: isMobile ? 24 : 32,
-    padding: isMobile ? 22 : 34,
-    boxShadow: "0 24px 64px rgba(86, 48, 124, 0.25)",
-    display: "grid",
-    alignContent: "space-between",
-    minHeight: isMobile ? "auto" : 580,
-    gap: isMobile ? 18 : 24,
-  }),
+    boxShadow: "0 30px 70px rgba(90, 54, 119, 0.24)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    gap: "24px",
+  },
 
-  brandBadge: {
-    display: "inline-flex",
-    width: "fit-content",
-    padding: "8px 14px",
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.14)",
+  badge: {
+    alignSelf: "flex-start",
+    padding: "10px 16px",
+    borderRadius: "999px",
+    background: "rgba(255,255,255,0.16)",
+    fontSize: "14px",
     fontWeight: 800,
-    fontSize: 12,
-    letterSpacing: 0.5,
+    letterSpacing: "0.06em",
     textTransform: "uppercase",
   },
 
-  heroTitle: (isMobile) => ({
-    margin: "8px 0 12px",
-    fontSize: isMobile ? "2rem" : "clamp(2.4rem, 4vw, 4.6rem)",
-    lineHeight: 1.02,
-    maxWidth: isMobile ? "100%" : 12,
-  }),
-
-  heroText: (isMobile) => ({
+  heroTitle: {
     margin: 0,
-    maxWidth: isMobile ? "100%" : "34ch",
-    color: "rgba(255,255,255,0.88)",
-    fontSize: isMobile ? 15 : 16,
-    lineHeight: 1.7,
-  }),
-
-  heroHighlights: (isMobile) => ({
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: isMobile ? 2 : 28,
-  }),
-
-  badge: {
-    background: "rgba(255,255,255,0.12)",
-    border: "1px solid rgba(255,255,255,0.14)",
-    color: "#fff",
-    borderRadius: 999,
-    padding: "10px 14px",
-    fontSize: 13,
-    fontWeight: 700,
+    maxWidth: "540px",
+    fontSize: "78px",
+    lineHeight: 0.96,
+    fontWeight: 800,
+    letterSpacing: "-0.04em",
   },
 
-  loginCard: (isMobile) => ({
-    background: "#fff",
-    border: "1px solid #eadff7",
-    borderRadius: isMobile ? 24 : 28,
-    padding: isMobile ? 20 : 28,
-    boxShadow: "0 20px 50px rgba(92, 63, 122, 0.10)",
-    display: "grid",
-    alignContent: "start",
-    gap: 18,
-  }),
+  heroText: {
+    margin: 0,
+    maxWidth: "520px",
+    fontSize: "26px",
+    lineHeight: 1.45,
+    color: "rgba(255,255,255,0.88)",
+  },
 
-  cardHeader: (isMobile) => ({
+  heroInfo: {
+    display: "grid",
+    gap: "14px",
+  },
+
+  heroInfoItem: {
+    padding: "18px 20px",
+    borderRadius: "22px",
+    background: "rgba(255,255,255,0.12)",
+    border: "1px solid rgba(255,255,255,0.12)",
+  },
+
+  heroInfoLabel: {
+    display: "block",
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "rgba(255,255,255,0.68)",
+    marginBottom: "6px",
+  },
+
+  heroInfoValue: {
+    fontSize: "18px",
+    lineHeight: 1.35,
+  },
+
+  formCard: {
+    background: "#ffffff",
+    borderRadius: "34px",
+    padding: "34px 30px",
+    boxShadow: "0 26px 60px rgba(104, 78, 136, 0.12)",
+    border: "1px solid rgba(111, 60, 195, 0.10)",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: isMobile ? "flex-start" : "center",
-  }),
+    flexDirection: "column",
+    justifyContent: "center",
+    minHeight: "720px",
+  },
 
   eyebrow: {
     margin: 0,
-    color: "#876ca8",
-    fontSize: 12,
+    fontSize: "14px",
     textTransform: "uppercase",
+    letterSpacing: "0.12em",
+    color: "#8d74b6",
     fontWeight: 800,
-    letterSpacing: 1,
   },
 
-  cardTitle: (isMobile) => ({
-    margin: "6px 0 0",
+  title: {
+    margin: "10px 0 8px",
+    fontSize: "48px",
+    lineHeight: 1.05,
     color: "#2f2340",
-    fontSize: isMobile ? 24 : 28,
-    lineHeight: 1.1,
-  }),
-
-  notice: {
-    border: "1px solid",
-    borderRadius: 16,
-    padding: "12px 14px",
-    fontWeight: 700,
-    fontSize: 14,
   },
 
-  form: {
+  subtitle: {
+    margin: "0 0 22px",
+    fontSize: "17px",
+    lineHeight: 1.55,
+    color: "#78688f",
+  },
+
+  formGrid: {
     display: "grid",
-    gap: 14,
+    gap: "16px",
+    marginTop: "14px",
   },
 
   field: {
     display: "grid",
-    gap: 8,
+    gap: "8px",
   },
 
   label: {
-    fontSize: 13,
-    color: "#7b6d8d",
+    fontSize: "15px",
     fontWeight: 700,
+    color: "#6f6280",
   },
 
   input: {
-    width: "100%",
+    height: "72px",
+    borderRadius: "22px",
     border: "1px solid #eadff7",
-    borderRadius: 16,
-    background: "#fcfbfe",
-    padding: "14px 16px",
-    fontSize: 16,
+    padding: "0 18px",
+    fontSize: "28px",
     color: "#2f2340",
     outline: "none",
-    minHeight: 52,
+    background: "#fbf9ff",
   },
 
   primaryButton: {
-    border: 0,
-    borderRadius: 16,
-    padding: "15px 18px",
-    background: "linear-gradient(135deg, #6f3cc3 0%, #532d92 100%)",
+    height: "64px",
+    border: "none",
+    borderRadius: "20px",
+    background: "linear-gradient(135deg, #6f3cc3 0%, #5a2fab 100%)",
     color: "#fff",
+    fontSize: "18px",
     fontWeight: 800,
-    fontSize: 15,
     cursor: "pointer",
-    minHeight: 52,
-    width: "100%",
+    boxShadow: "0 18px 36px rgba(111, 60, 195, 0.24)",
   },
 
-  recoveryBox: {
-    display: "grid",
-    gap: 12,
+  secondaryButton: {
+    height: "58px",
+    borderRadius: "18px",
+    border: "1px solid #eadff7",
+    background: "#faf7ff",
+    color: "#2f2340",
+    fontSize: "17px",
+    fontWeight: 700,
+    cursor: "pointer",
   },
 
   linkButton: {
-    border: 0,
     background: "transparent",
-    color: "#6f3cc3",
-    fontWeight: 800,
+    border: "none",
     padding: 0,
     textAlign: "left",
+    color: "#6f3cc3",
+    fontSize: "16px",
+    fontWeight: 800,
     cursor: "pointer",
-  },
-
-  recoveryPanel: (isMobile) => ({
-    border: "1px solid #eadff7",
-    background: "#faf7fe",
-    borderRadius: isMobile ? 18 : 20,
-    padding: isMobile ? 14 : 16,
-    display: "grid",
-    gap: 12,
-  }),
-
-  recoveryText: {
-    margin: 0,
-    color: "#6e627e",
-    lineHeight: 1.6,
-    fontSize: 14,
-  },
-
-  recoveryActions: (isMobile) => ({
-    display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-    gap: 10,
-  }),
-
-  secondaryAction: (isMobile) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-    width: "100%",
-    padding: isMobile ? "12px 14px" : "12px 16px",
-    borderRadius: 14,
-    background: "#fff",
-    border: "1px solid #e4d6f4",
-    color: "#3f2a60",
-    fontWeight: 700,
-    textDecoration: "none",
-    textAlign: "center",
-  }),
-
-  helperText: {
-    margin: 0,
-    color: "#8a7d99",
-    fontSize: 13,
-    lineHeight: 1.6,
   },
 
   divider: {
-    height: 1,
-    background: "#efe7f8",
-    margin: "6px 0 2px",
+    height: "1px",
+    background: "#eee4f8",
+    margin: "8px 0 6px",
   },
 
-  employeeButton: {
-    border: "1px solid #eadff7",
-    borderRadius: 16,
+  errorBox: {
     padding: "14px 16px",
-    background: "#fbf9fe",
-    color: "#2f2340",
-    fontWeight: 800,
-    cursor: "pointer",
-    minHeight: 52,
-    width: "100%",
+    borderRadius: "16px",
+    border: "1px solid #f1cad8",
+    background: "#fff3f7",
+    color: "#c74970",
+    fontSize: "15px",
+    fontWeight: 700,
   },
 };
