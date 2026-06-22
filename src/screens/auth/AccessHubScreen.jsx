@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import brandLogo from "../../assets/logo.png";
-import "./AccessHubScreen-2.css";
+import "./AccessHubScreen.css";
 
 export default function AccessHubScreen({
   onCustomerEnter,
