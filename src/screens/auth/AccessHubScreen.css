@@ -1,225 +1,516 @@
 :root {
-  --access-bg: #f7f2ff;
-  --access-bg-2: #efe7fb;
-  --access-surface: rgba(255, 255, 255, 0.86);
-  --access-surface-strong: #ffffff;
-  --access-border: #e3d8f3;
-  --access-text: #341c45;
-  --access-muted: #7e6d93;
-  --access-primary: #5f2d79;
-  --access-primary-2: #8151a4;
-  --access-accent: #f1cb6c;
-  --access-accent-2: #ffe59d;
-  --access-shadow: 0 20px 50px rgba(90, 54, 119, 0.14);
-  --access-radius-xl: 30px;
-  --access-radius-lg: 24px;
-  --access-radius-md: 18px;
-  --access-transition: 180ms ease;
+  --accesshub-bg: #f7f2ff;
+  --accesshub-bg-2: #eee5fb;
+  --accesshub-surface: rgba(255, 255, 255, 0.96);
+  --accesshub-surface-soft: rgba(248, 243, 255, 0.92);
+  --accesshub-border: #e7daf8;
+  --accesshub-text: #2f2340;
+  --accesshub-text-soft: #6f6280;
+  --accesshub-text-faint: #8b7ba1;
+  --accesshub-primary: #6f3cc3;
+  --accesshub-primary-2: #4f2798;
+  --accesshub-primary-soft: rgba(111, 60, 195, 0.08);
+  --accesshub-hero-top: #241531;
+  --accesshub-hero-mid: #342047;
+  --accesshub-hero-bottom: #4d3170;
+  --accesshub-white: #ffffff;
+  --accesshub-danger-bg: #fff2f6;
+  --accesshub-danger-border: #f3cad7;
+  --accesshub-danger-text: #bf4268;
+  --accesshub-shadow-lg: 0 28px 60px rgba(95, 63, 141, 0.14);
+  --accesshub-shadow-md: 0 18px 40px rgba(95, 63, 141, 0.12);
+  --accesshub-shadow-button: 0 18px 34px rgba(111, 60, 195, 0.22);
+  --accesshub-radius-xl: 34px;
+  --accesshub-radius-lg: 24px;
+  --accesshub-radius-md: 18px;
+  --accesshub-radius-sm: 14px;
+  --accesshub-transition: 180ms ease;
 }
 
-.access-page {
+.accesshub-page {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 28px;
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 25%),
-    radial-gradient(circle at bottom right, rgba(209, 190, 243, 0.4) 0%, rgba(209, 190, 243, 0) 32%),
-    linear-gradient(180deg, var(--access-bg) 0%, var(--access-bg-2) 100%);
-}
-
-.access-shell {
-  width: min(1080px, 100%);
-  display: grid;
-  gap: 22px;
-}
-
-.access-hero,
-.access-card {
-  border: 1px solid var(--access-border);
-  background: var(--access-surface);
-  backdrop-filter: blur(12px);
-  box-shadow: var(--access-shadow);
-}
-
-.access-hero {
-  border-radius: var(--access-radius-xl);
-  padding: 28px;
-  display: grid;
-  gap: 20px;
-  background:
-    linear-gradient(135deg, rgba(255, 229, 157, 0.42), rgba(129, 81, 164, 0.05)),
-    var(--access-surface-strong);
-}
-
-.access-brand {
-  display: flex;
-  gap: 18px;
-  align-items: center;
-}
-
-.access-brand__mark {
-  width: 96px;
-  height: 96px;
-  border-radius: 28px;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(95, 45, 121, 0.08);
   display: grid;
   place-items: center;
-}
-
-.access-brand__mark img {
-  width: 84%;
-  height: auto;
-  object-fit: contain;
-}
-
-.access-eyebrow {
-  display: inline-flex;
-  margin-bottom: 10px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(95, 45, 121, 0.1);
-  color: var(--access-primary);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.access-brand__copy h1 {
-  margin: 0 0 10px;
-  color: var(--access-text);
-  font-size: clamp(2rem, 3vw, 3rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-}
-
-.access-brand__copy p {
-  margin: 0;
-  color: var(--access-muted);
-  line-height: 1.7;
-  font-size: 1rem;
-}
-
-.access-actions-inline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.access-link-chip {
-  text-decoration: none;
-  display: inline-flex;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(95, 45, 121, 0.08);
-  color: var(--access-primary);
-  font-weight: 700;
-  border: 1px solid rgba(95, 45, 121, 0.08);
-}
-
-.access-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
-}
-
-.access-card {
-  border-radius: var(--access-radius-lg);
-  padding: 24px;
+  padding: 28px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 242, 255, 0.9));
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0) 24%),
+    radial-gradient(circle at bottom right, rgba(209, 190, 243, 0.38) 0%, rgba(209, 190, 243, 0) 32%),
+    linear-gradient(180deg, var(--accesshub-bg) 0%, var(--accesshub-bg-2) 100%);
 }
 
-.access-card__badge {
-  display: inline-flex;
-  margin-bottom: 14px;
-  padding: 7px 11px;
-  border-radius: 999px;
-  background: rgba(95, 45, 121, 0.08);
-  color: var(--access-primary);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.accesshub-shell {
+  width: min(1240px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+  gap: 24px;
+  align-items: stretch;
 }
 
-.access-card h2 {
-  margin: 0 0 10px;
-  color: var(--access-text);
-  font-size: 1.45rem;
-  line-height: 1.1;
+.accesshub-login-card,
+.accesshub-hero-card {
+  border-radius: var(--accesshub-radius-xl);
+  overflow: hidden;
+  min-height: 720px;
 }
 
-.access-card p {
+.accesshub-login-card {
+  background: var(--accesshub-surface);
+  border: 1px solid rgba(111, 60, 195, 0.08);
+  box-shadow: var(--accesshub-shadow-lg);
+  padding: 34px 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.accesshub-login-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 20px;
+}
+
+.accesshub-logo {
+  width: min(170px, 44vw);
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(111, 60, 195, 0.08));
+}
+
+.accesshub-heading {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.accesshub-eyebrow {
   margin: 0;
-  color: var(--access-muted);
-  line-height: 1.7;
-  min-height: 54px;
+  font-size: 0.79rem;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  color: #8d74b6;
 }
 
-.access-btn {
+.accesshub-heading h1 {
+  margin: 0;
+  color: var(--accesshub-text);
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+}
+
+.accesshub-subtitle {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--accesshub-text-soft);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.accesshub-form {
+  display: grid;
+  gap: 16px;
+}
+
+.accesshub-field {
+  display: grid;
+  gap: 8px;
+}
+
+.accesshub-field span {
+  color: var(--accesshub-text-soft);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.accesshub-field input {
   width: 100%;
-  margin-top: 18px;
-  border: 0;
-  border-radius: 16px;
-  padding: 14px 16px;
+  height: 60px;
+  border-radius: 18px;
+  border: 1px solid var(--accesshub-border);
+  background: #fbf9ff;
+  color: var(--accesshub-text);
+  padding: 0 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  transition:
+    border-color var(--accesshub-transition),
+    box-shadow var(--accesshub-transition),
+    background var(--accesshub-transition);
+}
+
+.accesshub-field input::placeholder {
+  color: #9e8fb6;
+  font-weight: 500;
+}
+
+.accesshub-field input:focus {
+  border-color: rgba(111, 60, 195, 0.32);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(111, 60, 195, 0.08);
+}
+
+.accesshub-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.accesshub-button {
+  width: 100%;
+  min-height: 56px;
+  border: none;
+  border-radius: 18px;
+  padding: 14px 18px;
+  font-size: 1rem;
+  line-height: 1.2;
   font-weight: 800;
   cursor: pointer;
   transition:
-    transform var(--access-transition),
-    filter var(--access-transition),
-    box-shadow var(--access-transition);
+    transform var(--accesshub-transition),
+    filter var(--accesshub-transition),
+    box-shadow var(--accesshub-transition),
+    background var(--accesshub-transition);
 }
 
-.access-btn--primary {
-  background: linear-gradient(135deg, var(--access-primary) 0%, var(--access-primary-2) 100%);
-  color: #ffffff;
-  box-shadow: 0 14px 24px rgba(95, 45, 121, 0.18);
+.accesshub-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
 }
 
-.access-btn--secondary {
-  background: linear-gradient(135deg, var(--access-accent) 0%, var(--access-accent-2) 100%);
-  color: #56350e;
-  box-shadow: 0 14px 24px rgba(241, 203, 108, 0.24);
-}
-
-.access-btn:hover {
+.accesshub-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  filter: brightness(1.02);
+  filter: brightness(1.01);
 }
 
-@media (max-width: 980px) {
-  .access-actions {
+.accesshub-button--primary {
+  color: var(--accesshub-white);
+  background: linear-gradient(135deg, var(--accesshub-primary) 0%, var(--accesshub-primary-2) 100%);
+  box-shadow: var(--accesshub-shadow-button);
+}
+
+.accesshub-button--secondary {
+  color: var(--accesshub-text);
+  background: #faf7ff;
+  border: 1px solid var(--accesshub-border);
+  box-shadow: none;
+}
+
+.accesshub-button--ghost {
+  color: var(--accesshub-text);
+  background: transparent;
+  border: 1px solid var(--accesshub-border);
+  box-shadow: none;
+}
+
+.accesshub-text-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  text-align: left;
+  color: var(--accesshub-primary);
+  font-size: 0.96rem;
+  line-height: 1.3;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.accesshub-divider {
+  height: 1px;
+  margin: 20px 0 18px;
+  background: linear-gradient(90deg, rgba(231, 218, 248, 0) 0%, rgba(231, 218, 248, 1) 14%, rgba(231, 218, 248, 1) 86%, rgba(231, 218, 248, 0) 100%);
+}
+
+.accesshub-store-entry {
+  display: grid;
+  gap: 12px;
+}
+
+.accesshub-store-label {
+  margin: 0;
+  color: var(--accesshub-text-faint);
+  font-size: 0.86rem;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+.accesshub-error {
+  border: 1px solid var(--accesshub-danger-border);
+  background: var(--accesshub-danger-bg);
+  color: var(--accesshub-danger-text);
+  border-radius: 16px;
+  padding: 13px 14px;
+  font-size: 0.94rem;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.accesshub-hero-card {
+  background: linear-gradient(180deg, var(--accesshub-hero-top) 0%, var(--accesshub-hero-mid) 42%, var(--accesshub-hero-bottom) 100%);
+  color: var(--accesshub-white);
+  box-shadow: 0 30px 70px rgba(58, 33, 87, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 42px 40px;
+}
+
+.accesshub-hero-inner {
+  width: 100%;
+  display: grid;
+  gap: 18px;
+  align-content: center;
+}
+
+.accesshub-hero-eyebrow {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.9rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+
+.accesshub-hero-title {
+  margin: 0;
+  max-width: 680px;
+  color: var(--accesshub-white);
+  font-size: clamp(2.6rem, 6vw, 4.9rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+}
+
+.accesshub-hero-text {
+  margin: 0;
+  max-width: 28rem;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: clamp(1rem, 2vw, 1.45rem);
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .accesshub-shell {
     grid-template-columns: 1fr;
   }
+
+  .accesshub-login-card,
+  .accesshub-hero-card {
+    min-height: auto;
+  }
+
+  .accesshub-login-card {
+    order: 1;
+  }
+
+  .accesshub-hero-card {
+    order: 2;
+    padding: 34px 30px;
+  }
+
+  .accesshub-hero-title {
+    max-width: 100%;
+  }
 }
 
-@media (max-width: 680px) {
-  .access-page {
-    padding: 16px;
+@media (max-width: 768px) {
+  .accesshub-page {
+    padding: 18px;
   }
 
-  .access-hero,
-  .access-card {
-    padding: 20px;
+  .accesshub-shell {
+    gap: 18px;
   }
 
-  .access-brand {
-    align-items: flex-start;
-    flex-direction: column;
+  .accesshub-login-card,
+  .accesshub-hero-card {
+    border-radius: 28px;
   }
 
-  .access-brand__mark {
-    width: 80px;
-    height: 80px;
+  .accesshub-login-card {
+    padding: 24px 20px;
   }
 
-  .access-card p {
-    min-height: auto;
+  .accesshub-login-head {
+    margin-bottom: 16px;
+  }
+
+  .accesshub-heading {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .accesshub-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .accesshub-field input {
+    height: 54px;
+    border-radius: 16px;
+    font-size: 0.98rem;
+  }
+
+  .accesshub-button {
+    min-height: 52px;
+    border-radius: 16px;
+    font-size: 0.96rem;
+  }
+
+  .accesshub-divider {
+    margin: 18px 0 16px;
+  }
+
+  .accesshub-hero-card {
+    padding: 28px 22px;
+  }
+
+  .accesshub-hero-inner {
+    gap: 14px;
+  }
+
+  .accesshub-hero-text {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .accesshub-page {
+    padding: 12px;
+    align-items: stretch;
+  }
+
+  .accesshub-shell {
+    gap: 14px;
+  }
+
+  .accesshub-login-card,
+  .accesshub-hero-card {
+    border-radius: 22px;
+  }
+
+  .accesshub-login-card {
+    padding: 18px 16px;
+  }
+
+  .accesshub-logo {
+    width: min(136px, 42vw);
+  }
+
+  .accesshub-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+  }
+
+  .accesshub-heading h1 {
+    font-size: clamp(1.75rem, 8vw, 2.2rem);
+    line-height: 1;
+  }
+
+  .accesshub-subtitle {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  .accesshub-form {
+    gap: 14px;
+  }
+
+  .accesshub-field {
+    gap: 7px;
+  }
+
+  .accesshub-field span {
+    font-size: 0.88rem;
+  }
+
+  .accesshub-field input {
+    height: 50px;
+    padding: 0 14px;
+    font-size: 0.95rem;
+    border-radius: 14px;
+  }
+
+  .accesshub-actions {
+    gap: 10px;
+  }
+
+  .accesshub-button {
+    min-height: 48px;
+    padding: 12px 14px;
+    font-size: 0.93rem;
+    border-radius: 14px;
+  }
+
+  .accesshub-text-button {
+    font-size: 0.92rem;
+  }
+
+  .accesshub-store-label {
+    font-size: 0.78rem;
+  }
+
+  .accesshub-error {
+    border-radius: 14px;
+    padding: 11px 12px;
+    font-size: 0.88rem;
+  }
+
+  .accesshub-hero-card {
+    padding: 22px 16px;
+  }
+
+  .accesshub-hero-eyebrow {
+    font-size: 0.76rem;
+  }
+
+  .accesshub-hero-title {
+    font-size: clamp(2rem, 10vw, 2.8rem);
+    line-height: 0.98;
+  }
+
+  .accesshub-hero-text {
+    font-size: 0.98rem;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 380px) {
+  .accesshub-page {
+    padding: 10px;
+  }
+
+  .accesshub-login-card {
+    padding: 16px 14px;
+  }
+
+  .accesshub-hero-card {
+    padding: 20px 14px;
+  }
+
+  .accesshub-heading h1 {
+    font-size: 1.65rem;
+  }
+
+  .accesshub-field input {
+    height: 48px;
+  }
+
+  .accesshub-button {
+    min-height: 46px;
+    font-size: 0.9rem;
+  }
+
+  .accesshub-hero-title {
+    font-size: 1.9rem;
   }
 }
